@@ -1,0 +1,28 @@
+.addbook-page { padding: 40px 0 80px; }
+.addbook-container { display: grid; grid-template-columns: 340px 1fr; gap: 32px; align-items: start; }
+
+/* Sidebar */
+.addbook-info { background: var(--primary); color: white; border-radius: var(--radius-lg); padding: 32px; }
+.addbook-info h2 { font-size: 1.5rem; font-weight: 800; margin-bottom: 12px; font-family: 'Plus Jakarta Sans', sans-serif; }
+.addbook-info p { font-size: 0.9rem; opacity: 0.85; line-height: 1.6; margin-bottom: 24px; font-family: 'Plus Jakarta Sans', sans-serif; }
+.addbook-tips { display: flex; flex-direction: column; gap: 14px; }
+.tip-item { font-size: 0.83rem; opacity: 0.85; line-height: 1.5; }
+
+/* Form card */
+.addbook-form-card { background: var(--surface); border-radius: var(--radius-lg); padding: 36px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); }
+.form-heading { font-size: 1.25rem; font-weight: 800; margin-bottom: 24px; color: var(--text-1); font-family: 'Plus Jakarta Sans', sans-serif; }
+.addbook-form { display: flex; flex-direction: column; gap: 20px; }
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group label { font-size: 0.85rem; font-weight: 700; color: var(--text-2); }
+.form-group input, .form-group select { padding: 11px 14px; border: 1.5px solid var(--border); border-radius: var(--radius); font-family: inherit; font-size: 0.9rem; transition: border-color 0.2s; background: var(--bg); }
+.form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary); background: white; }
+.form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.cover-preview { margin-top: 10px; }
+.cover-preview img { height: 120px; border-radius: 6px; object-fit: cover; border: 1px solid var(--border); }
+.success-msg { text-align: center; padding: 60px 20px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.success-msg h3 { font-size: 1.4rem; font-weight: 800; color: var(--green); }
+.success-msg p { color: var(--text-2); }
+
+@media (max-width: 800px) {
+  .addbook-container { grid-template-columns: 1fr; }
+}

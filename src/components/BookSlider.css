@@ -1,0 +1,59 @@
+.book-slider-wrap {
+  position: relative;
+  overflow: hidden;
+}
+
+.book-slider {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding: 6px 4px 12px;
+  /* hide scrollbar */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.book-slider::-webkit-scrollbar { display: none; }
+
+.slider-card {
+  flex: 0 0 180px;
+  scroll-snap-align: start;
+  /* EQUAL HEIGHTS — all cards in a row same height */
+  display: flex;
+  flex-direction: column;
+}
+
+.slider-card > * {
+  flex: 1;
+  height: 100%;
+}
+
+/* Arrow buttons */
+.slider-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  background: white;
+  border: 1.5px solid var(--border);
+  border-radius: 50%;
+  width: 38px;
+  height: 38px;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-1);
+  transition: all 0.2s;
+}
+.slider-arrow:hover {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+  box-shadow: 0 4px 14px rgba(30,58,138,0.3);
+}
+.slider-prev { left: -8px; }
+.slider-next { right: -8px; }

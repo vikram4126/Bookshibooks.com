@@ -1,0 +1,84 @@
+/* ── Announce bar ── */
+.site-header { background: var(--surface); box-shadow: 0 2px 10px rgba(0,0,0,0.08); position: sticky; top: 0; z-index: 300; }
+.announce-bar { background: #1e3166; color: rgba(255,255,255,0.85); font-size: 0.78rem; padding: 7px 0; }
+.announce-inner { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+.announce-links { display: flex; gap: 20px; }
+.announce-links a { opacity: 0.75; transition: opacity 0.2s; }
+.announce-links a:hover { opacity: 1; }
+
+/* ── Main nav ── */
+.main-nav { padding: 14px 0; border-bottom: 1px solid var(--border); }
+.main-nav-inner {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+}
+
+/* Logo */
+.site-logo { display: flex; align-items: center; gap: 12px; flex: 0 0 200px; }
+.logo-icon { font-size: 2rem; line-height: 1; }
+.logo-name { font-size: 1.3rem; font-weight: 800; color: var(--primary); line-height: 1; font-family: 'Plus Jakarta Sans', sans-serif; }
+.logo-sub { font-size: 0.65rem; color: var(--text-3); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+
+/* Search — takes remaining space but capped */
+.nav-search {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 420px;
+  display: flex;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.nav-search:focus-within { border-color: var(--primary); }
+.nav-search input { flex: 1; border: none; outline: none; padding: 8px 14px; font-family: inherit; font-size: 0.85rem; min-width: 0; background: #f5f7fb; }
+.nav-search input:focus { background: white; }
+.search-submit { background: var(--accent); color: #0f172a; border: none; padding: 0 16px; font-family: inherit; font-size: 0.82rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: background 0.2s; flex-shrink: 0; }
+.search-submit:hover { background: var(--accent-hover); }
+
+/* Right actions */
+.nav-right { display: flex; align-items: center; gap: 12px; flex: 0 0 auto; margin-left: auto; }
+.nav-action-link, .nav-cart-btn { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 0.72rem; font-weight: 700; color: var(--text-2); padding: 6px 12px; border-radius: var(--radius); border: none; background: none; transition: all 0.2s; cursor: pointer; white-space: nowrap; }
+.nav-action-link:hover { color: var(--primary); background: #f0f4ff; }
+.nav-cart-btn { color: var(--text-2); }
+.nav-cart-btn:hover { color: var(--accent); background: var(--accent-light); }
+.nav-action-icon { font-size: 1.4rem; line-height: 1; }
+.cart-icon-wrap { position: relative; font-size: 1.4rem; line-height: 1; display: flex; }
+.cart-count { position: absolute; top: -5px; right: -8px; background: var(--accent); color: #0f172a; font-size: 0.6rem; font-weight: 900; min-width: 17px; height: 17px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+
+/* ── Category bar ── */
+.cat-bar { background: #f8f8f8; border-bottom: 1px solid var(--border); overflow: hidden; }
+.cat-bar-inner {
+  display: flex;
+  align-items: stretch;
+  overflow-x: auto;
+  width: 100%;
+  /* override container padding so links flush to edge feel right */
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+.cat-bar-inner::-webkit-scrollbar { display: none; }
+.cat-bar-link {
+  padding: 10px 20px;
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: var(--text-2);
+  white-space: nowrap;
+  border-right: 1px solid var(--border);
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.cat-bar-link:hover, .cat-bar-link.active { background: var(--primary); color: white; }
+.cat-bar-link.sale-link { color: var(--accent); font-weight: 700; }
+.cat-bar-link.sale-link:hover { background: var(--accent); color: #0f172a; }
+.cat-bar-link.kids-link { color: #6d28d9; }
+.cat-bar-link.kids-link:hover { background: #6d28d9; color: white; }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .site-logo { flex: 0 0 auto; }
+  .nav-action-link span:last-child { display: none; }
+  .nav-cart-btn span:last-child { display: none; }
+}
