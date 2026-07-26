@@ -10,6 +10,7 @@ import BookDetail from './pages/BookDetail';
 import ManageBooks from './pages/ManageBooks';
 import AdminLogin from './pages/AdminLogin';
 import Profile from './pages/Profile';
+import AdminSettings from './pages/AdminSettings';
 import './App.css';
 
 export const CartContext = createContext(null);
@@ -70,6 +71,7 @@ function AppContent() {
               {/* Protected Admin Routes */}
               <Route path="/manage" element={<AdminRoute element={<ManageBooks />} />} />
               <Route path="/add-book" element={<AdminRoute element={<AddBook />} />} />
+              <Route path="/settings" element={<AdminRoute element={<AdminSettings />} />} />
             </Routes>
           </main>
           <Footer />

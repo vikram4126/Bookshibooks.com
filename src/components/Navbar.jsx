@@ -78,9 +78,13 @@ const Navbar = () => {
           <div className="nav-right">
             {isAdmin && (
               <>
-                <Link to="/manage" className="nav-action-link admin-link">
+                <Link to="/settings" className="nav-action-link admin-link">
                   <span className="nav-action-icon"><Settings size={20} /></span>
-                  <span>Manage</span>
+                  <span>Settings</span>
+                </Link>
+                <Link to="/manage" className="nav-action-link admin-link">
+                  <span className="nav-action-icon"><BookOpen size={20} /></span>
+                  <span>Books</span>
                 </Link>
                 <Link to="/add-book" className="nav-action-link admin-link">
                   <span className="nav-action-icon"><PlusCircle size={20} /></span>

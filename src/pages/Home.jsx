@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { db } from '../utils/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 import { getBooks } from '../utils/storage';
 import BookCard from '../components/BookCard';
 import BookSlider from '../components/BookSlider';
@@ -22,11 +24,19 @@ const CATEGORIES = [
 
 const Home = () => {
   const [books, setBooks] = useState([]);
+  const [bannerText, setBannerText] = useState('Use Code WELCOME10 — Get 10% off your first order!  ·  Free delivery on orders above ₹999');
   const [searchParams] = useSearchParams();
   const activeCat = searchParams.get('cat') || 'All';
 
   useEffect(() => {
     getBooks().then(data => setBooks(data));
+    
+    // Fetch banner text
+    getDoc(doc(db, 'settings', 'site')).then(docSnap => {
+      if (docSnap.exists() && docSnap.data().homeBannerText) {
+        setBannerText(docSnap.data().homeBannerText);
+      }
+    });
   }, []);
 
   const bestsellers = books.filter(b => b.badge === 'Best');
@@ -160,7 +170,7 @@ const Home = () => {
 
           {/* ── Promo strip ── */}
           <div className="promo-strip">
-            🎉 Use Code <span>WELCOME10</span> — Get 10% off your first order! &nbsp;·&nbsp; Free delivery on orders above ₹999
+            {bannerText}
           </div>
 
           {/* ── New Arrivals SLIDER ── */}
