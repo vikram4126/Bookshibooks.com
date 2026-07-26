@@ -2,6 +2,10 @@ import { useState } from 'react';
 import { Link, useLocation, useSearchParams, useNavigate } from 'react-router-dom';
 import { useCart } from '../App';
 import { useAuth } from '../utils/AuthContext';
+import { 
+  Search, Settings, PlusCircle, User, ShoppingCart, 
+  BookOpen, LogIn, Key, BookType
+} from 'lucide-react';
 import './Navbar.css';
 
 const Navbar = () => {
@@ -21,7 +25,7 @@ const Navbar = () => {
   };
 
   const categories = [
-    { label: '🏠 All Books', value: 'All' },
+    { label: 'All Books', value: 'All' },
     { label: 'Fiction', value: 'Fiction' },
     { label: 'Non-Fiction', value: 'Non-Fiction' },
     { label: 'Children', value: 'Children' },
@@ -37,12 +41,12 @@ const Navbar = () => {
       {/* Announcement bar */}
       <div className="announce-bar">
         <div className="container announce-inner">
-          <span>🇮🇳 Pan India Delivery Available | 🇬🇧 UK Imported Books</span>
+          <span>Pan India Delivery Available | UK Imported Books</span>
           <div className="announce-links">
             <Link to="/">Track Order</Link>
             <Link to="/">FAQs</Link>
             <Link to="/">Contact Us</Link>
-            {isAdmin && <span className="admin-badge-bar">🔑 Admin Mode</span>}
+            {isAdmin && <span className="admin-badge-bar"><Key size={14} className="mr-1"/> Admin Mode</span>}
           </div>
         </div>
       </div>
@@ -51,7 +55,7 @@ const Navbar = () => {
       <nav className="main-nav">
         <div className="container main-nav-inner">
           <Link to="/" className="site-logo">
-            <span className="logo-icon">📚</span>
+            <span className="logo-icon"><BookOpen size={28} /></span>
             <div>
               <div className="logo-name">BookshiBooks</div>
               <div className="logo-sub">UK Books · India Delivery</div>
@@ -66,18 +70,20 @@ const Navbar = () => {
               value={query}
               onChange={e => setQuery(e.target.value)}
             />
-            <button type="submit" className="search-submit">🔍 Search</button>
+            <button type="submit" className="search-submit">
+              <Search size={18} /> <span>Search</span>
+            </button>
           </form>
 
           <div className="nav-right">
             {isAdmin && (
               <>
                 <Link to="/manage" className="nav-action-link admin-link">
-                  <span className="nav-action-icon">⚙️</span>
+                  <span className="nav-action-icon"><Settings size={20} /></span>
                   <span>Manage</span>
                 </Link>
                 <Link to="/add-book" className="nav-action-link admin-link">
-                  <span className="nav-action-icon">📋</span>
+                  <span className="nav-action-icon"><PlusCircle size={20} /></span>
                   <span>Add Book</span>
                 </Link>
               </>
@@ -85,19 +91,19 @@ const Navbar = () => {
 
             {user ? (
               <Link to="/profile" className="nav-action-link">
-                <span className="nav-action-icon">👤</span>
+                <span className="nav-action-icon"><User size={20} /></span>
                 <span>Profile</span>
               </Link>
             ) : (
               <button className="nav-action-link btn-login" onClick={loginWithGoogle}>
-                <span className="nav-action-icon">Google</span>
+                <span className="nav-action-icon"><LogIn size={20} /></span>
                 <span>Login</span>
               </button>
             )}
 
             <Link to="/cart" className="nav-cart-btn" id="nav-cart-btn">
               <span className="cart-icon-wrap">
-                🛒
+                <ShoppingCart size={22} />
                 {totalCount > 0 && <span className="cart-count">{totalCount}</span>}
               </span>
               <span>Cart</span>
@@ -119,11 +125,12 @@ const Navbar = () => {
                   ? 'active' : ''
               }`}
             >
+              {c.value === 'All' && <BookType size={16} style={{marginRight: '6px'}} />}
               {c.label}
             </Link>
           ))}
-          <Link to="/?cat=Sale" className={`cat-bar-link sale-link ${activeCat === 'Sale' ? 'active' : ''}`}>🔥 Sale</Link>
-          <Link to="/?cat=Kids" className={`cat-bar-link kids-link ${activeCat === 'Kids' ? 'active' : ''}`}>🧒 Kids</Link>
+          <Link to="/?cat=Sale" className={`cat-bar-link sale-link ${activeCat === 'Sale' ? 'active' : ''}`}>Sale</Link>
+          <Link to="/?cat=Kids" className={`cat-bar-link kids-link ${activeCat === 'Kids' ? 'active' : ''}`}>Kids</Link>
         </div>
       </div>
     </header>

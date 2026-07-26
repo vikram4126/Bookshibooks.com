@@ -4,6 +4,7 @@ import { db } from '../utils/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { useCart } from '../App';
 import { useAuth } from '../utils/AuthContext';
+import { Truck, CheckCircle, MapPin, AlertTriangle, Heart, Check } from 'lucide-react';
 import './BookDetail.css';
 
 const PLACEHOLDER = 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=400&h=600';
@@ -88,16 +89,16 @@ const BookDetail = () => {
           </div>
 
           <div className="bd-trust-strip">
-            <span>🚚 Free Delivery on ₹999+</span>
-            <span>✅ Quality Checked</span>
-            <span>🇬🇧 UK Imported</span>
+            <span><Truck size={16} style={{marginRight: 6}}/> Free Delivery on ₹999+</span>
+            <span><CheckCircle size={16} style={{marginRight: 6}}/> Quality Checked</span>
+            <span><MapPin size={16} style={{marginRight: 6}}/> UK Imported</span>
           </div>
 
           {book.quantity && (
             <div className="bd-stock-row">
               {Number(book.quantity) <= 3
-                ? <span className="bd-stock bd-stock-low">⚠️ Only {book.quantity} left in stock!</span>
-                : <span className="bd-stock bd-stock-ok">✅ {book.quantity} copies available</span>
+                ? <span className="bd-stock bd-stock-low"><AlertTriangle size={16} style={{marginRight: 4}}/> Only {book.quantity} left in stock!</span>
+                : <span className="bd-stock bd-stock-ok"><CheckCircle size={16} style={{marginRight: 4}}/> {book.quantity} copies available</span>
               }
             </div>
           )}
@@ -112,14 +113,14 @@ const BookDetail = () => {
                 className="btn bd-add-btn btn-navy"
                 onClick={handleAdd}
               >
-                {added ? '✓ Added' : 'Add to Cart'}
+                {added ? <><Check size={18} style={{marginRight: 4}}/> Added</> : 'Add to Cart'}
               </button>
               <button
                 className="btn bd-wish-btn btn-outline"
                 onClick={() => toggleWishlist(book.id)}
                 title="Add to Wishlist"
               >
-                {wishlistIds.includes(book.id) ? '❤️ Liked' : '🤍 Like'}
+                <Heart size={20} fill={wishlistIds.includes(book.id) ? 'currentColor' : 'none'} />
               </button>
             </div>
 

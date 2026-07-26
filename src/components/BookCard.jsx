@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../utils/AuthContext';
+import { Heart } from 'lucide-react';
 import './BookCard.css';
 
 const BookCard = ({ book }) => {
@@ -33,7 +34,7 @@ const BookCard = ({ book }) => {
           }}
           aria-label="Wishlist"
         >
-          {liked ? '❤️' : '🤍'}
+          <Heart size={20} fill={liked ? 'currentColor' : 'none'} />
         </button>
       </div>
 

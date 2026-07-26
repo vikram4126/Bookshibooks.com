@@ -3,6 +3,7 @@ import { useAuth } from '../utils/AuthContext';
 import { db } from '../utils/firebase';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { Link } from 'react-router-dom';
+import { Package, Heart, LogOut } from 'lucide-react';
 import './Profile.css';
 
 const Profile = () => {
@@ -62,10 +63,12 @@ const Profile = () => {
     <main className="profile-page container fade-up">
       <div className="profile-header">
         <div className="profile-info">
-          <h2>Hello, {user.displayName || 'User'}! 👋</h2>
+          <h2>Hello, {user.displayName || 'User'}!</h2>
           <p>{user.email}</p>
         </div>
-        <button className="btn btn-outline" onClick={logout}>Sign Out</button>
+        <button className="btn btn-outline" onClick={logout}>
+          <LogOut size={16} style={{marginRight: 6}} /> Sign Out
+        </button>
       </div>
 
       <div className="profile-tabs">
@@ -73,13 +76,13 @@ const Profile = () => {
           className={`tab-btn ${activeTab === 'orders' ? 'active' : ''}`}
           onClick={() => setActiveTab('orders')}
         >
-          📦 My Orders
+          <Package size={18} style={{marginRight: 6}} /> My Orders
         </button>
         <button 
           className={`tab-btn ${activeTab === 'wishlist' ? 'active' : ''}`}
           onClick={() => setActiveTab('wishlist')}
         >
-          ❤️ My Wishlist
+          <Heart size={18} style={{marginRight: 6}} /> My Wishlist
         </button>
       </div>
 

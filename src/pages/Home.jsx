@@ -3,17 +3,21 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { getBooks } from '../utils/storage';
 import BookCard from '../components/BookCard';
 import BookSlider from '../components/BookSlider';
+import { 
+  Book, Baby, Trophy, Search, Heart, Clock, Briefcase, GraduationCap, 
+  Truck, ShieldCheck, RefreshCcw, Lock, BookOpen
+} from 'lucide-react';
 import './Home.css';
 
 const CATEGORIES = [
-  { icon: '📖', name: 'Fiction' },
-  { icon: '🧒', name: 'Children' },
-  { icon: '🏆', name: 'Bestsellers' },
-  { icon: '🔍', name: 'Thriller' },
-  { icon: '💑', name: 'Romance' },
-  { icon: '🕰️', name: 'History' },
-  { icon: '💼', name: 'Business' },
-  { icon: '🎓', name: 'Textbook' },
+  { icon: <Book size={24} />, name: 'Fiction' },
+  { icon: <Baby size={24} />, name: 'Children' },
+  { icon: <Trophy size={24} />, name: 'Bestsellers' },
+  { icon: <Search size={24} />, name: 'Thriller' },
+  { icon: <Heart size={24} />, name: 'Romance' },
+  { icon: <Clock size={24} />, name: 'History' },
+  { icon: <Briefcase size={24} />, name: 'Business' },
+  { icon: <GraduationCap size={24} />, name: 'Textbook' },
 ];
 
 const Home = () => {
@@ -77,11 +81,11 @@ const Home = () => {
       <div className="trust-bar">
         <div className="container trust-bar-inner">
           {[
-            { icon: '🚚', text: 'Free Delivery on ₹999+' },
-            { icon: '🇬🇧', text: 'Genuine UK Books' },
-            { icon: '✅', text: 'Quality Checked' },
-            { icon: '🔄', text: '7-Day Easy Returns' },
-            { icon: '🔒', text: 'Secure Payments' },
+            { icon: <Truck size={24} />, text: 'Free Delivery on ₹999+' },
+            { icon: <Book size={24} />, text: 'Genuine UK Books' },
+            { icon: <ShieldCheck size={24} />, text: 'Quality Checked' },
+            { icon: <RefreshCcw size={24} />, text: '7-Day Easy Returns' },
+            { icon: <Lock size={24} />, text: 'Secure Payments' },
           ].map(t => (
             <div key={t.text} className="trust-item">
               <span className="trust-icon">{t.icon}</span>
@@ -96,7 +100,7 @@ const Home = () => {
         <div className="container section-wrap">
           <div className="section-header">
             <h2 className="section-title">
-              {activeCat === 'Kids' ? '🧒' : activeCat === 'Adults' ? '📗' : activeCat === 'Textbook' ? '🎓' : activeCat === 'Sale' ? '🔥' : '✨'} {activeCat === 'Textbook' ? 'Textbooks' : `${activeCat} Books`}
+              {activeCat === 'Kids' ? <Baby size={28} style={{marginRight: 8}} /> : activeCat === 'Adults' ? <Book size={28} style={{marginRight: 8}} /> : activeCat === 'Textbook' ? <GraduationCap size={28} style={{marginRight: 8}} /> : activeCat === 'Sale' ? <Trophy size={28} style={{marginRight: 8}} /> : <BookOpen size={28} style={{marginRight: 8}} />} {activeCat === 'Textbook' ? 'Textbooks' : `${activeCat} Books`}
             </h2>
             <Link to="/" className="see-all-link">← Back to All</Link>
           </div>
