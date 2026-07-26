@@ -1,9 +1,10 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../utils/AuthContext';
 import './BookCard.css';
 
 const BookCard = ({ book }) => {
-  const [liked, setLiked] = useState(false);
+  const { wishlistIds, toggleWishlist } = useAuth();
+  const liked = wishlistIds.includes(book.id);
 
   const discount = book.oldPrice
     ? Math.round((1 - book.price / book.oldPrice) * 100)
@@ -14,7 +15,7 @@ const BookCard = ({ book }) => {
       {/* Image */}
       <div className="bcard-img-wrap">
         <img
-          src={book.coverUrl || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=240&h=360'}
+          src={book.coverUrl || book.image || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=240&h=360'}
           alt={book.title}
           className="bcard-img"
           loading="lazy"
@@ -28,7 +29,7 @@ const BookCard = ({ book }) => {
           className={`bcard-wish ${liked ? 'wished' : ''}`}
           onClick={(e) => {
             e.preventDefault(); // Prevent navigating when liking
-            setLiked(l => !l);
+            toggleWishlist(book.id);
           }}
           aria-label="Wishlist"
         >

@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Link, useLocation, useSearchParams, useNavigate } from 'react-router-dom';
 import { useCart } from '../App';
-import { useAdmin } from '../utils/AdminContext';
+import { useAuth } from '../utils/AuthContext';
 import './Navbar.css';
 
 const Navbar = () => {
   const { totalCount } = useCart();
-  const { isAdmin, logout } = useAdmin();
+  const { user, isAdmin, loginWithGoogle, logout } = useAuth();
   const [query, setQuery] = useState('');
   const location = useLocation();
   const navigate = useNavigate();
@@ -70,7 +70,7 @@ const Navbar = () => {
           </form>
 
           <div className="nav-right">
-            {isAdmin ? (
+            {isAdmin && (
               <>
                 <Link to="/manage" className="nav-action-link admin-link">
                   <span className="nav-action-icon">⚙️</span>
@@ -80,17 +80,21 @@ const Navbar = () => {
                   <span className="nav-action-icon">📋</span>
                   <span>Add Book</span>
                 </Link>
-                <button className="nav-action-link nav-logout-btn" onClick={handleLogout}>
-                  <span className="nav-action-icon">🚪</span>
-                  <span>Logout</span>
-                </button>
               </>
-            ) : (
-              <Link to="/admin" className="nav-action-link" title="Admin Login">
-                <span className="nav-action-icon">👤</span>
-                <span>Admin</span>
-              </Link>
             )}
+
+            {user ? (
+              <Link to="/profile" className="nav-action-link">
+                <span className="nav-action-icon">👤</span>
+                <span>Profile</span>
+              </Link>
+            ) : (
+              <button className="nav-action-link btn-login" onClick={loginWithGoogle}>
+                <span className="nav-action-icon">Google</span>
+                <span>Login</span>
+              </button>
+            )}
+
             <Link to="/cart" className="nav-cart-btn" id="nav-cart-btn">
               <span className="cart-icon-wrap">
                 🛒

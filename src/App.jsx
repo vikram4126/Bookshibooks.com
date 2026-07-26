@@ -1,6 +1,6 @@
 import { useState, createContext, useContext } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AdminProvider, useAdmin } from './utils/AdminContext';
+import { AuthProvider, useAuth } from './utils/AuthContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './pages/Home';
@@ -9,6 +9,7 @@ import CartPage from './pages/CartPage';
 import BookDetail from './pages/BookDetail';
 import ManageBooks from './pages/ManageBooks';
 import AdminLogin from './pages/AdminLogin';
+import Profile from './pages/Profile';
 import './App.css';
 
 export const CartContext = createContext(null);
@@ -16,7 +17,7 @@ export const useCart = () => useContext(CartContext);
 
 // Protected route wrapper for admin pages
 const AdminRoute = ({ element }) => {
-  const { isAdmin } = useAdmin();
+  const { isAdmin } = useAuth();
   return isAdmin ? element : <Navigate to="/admin" replace />;
 };
 
@@ -45,11 +46,13 @@ function AppContent() {
     if (qty < 1) { removeFromCart(id); return; }
     setCartItems(prev => prev.map(i => i.id === id ? { ...i, qty } : i));
   };
+  
+  const clearCart = () => setCartItems([]);
 
   const totalCount = cartItems.reduce((s, i) => s + i.qty, 0);
 
   return (
-    <CartContext.Provider value={{ cartItems, addToCart, removeFromCart, updateQty, totalCount }}>
+    <CartContext.Provider value={{ cartItems, addToCart, removeFromCart, updateQty, clearCart, totalCount }}>
       <Router>
         <div className="app-shell">
           <Navbar />
@@ -59,6 +62,7 @@ function AppContent() {
               <Route path="/" element={<Home />} />
               <Route path="/book/:id" element={<BookDetail />} />
               <Route path="/cart" element={<CartPage />} />
+              <Route path="/profile" element={<Profile />} />
 
               {/* Admin Login */}
               <Route path="/admin" element={<AdminLogin />} />
@@ -82,9 +86,9 @@ function AppContent() {
 
 function App() {
   return (
-    <AdminProvider>
+    <AuthProvider>
       <AppContent />
-    </AdminProvider>
+    </AuthProvider>
   );
 }
 

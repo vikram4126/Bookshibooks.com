@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getBookById } from '../utils/storage';
+import { db } from '../utils/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 import { useCart } from '../App';
+import { useAuth } from '../utils/AuthContext';
 import './BookDetail.css';
 
 const PLACEHOLDER = 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=400&h=600';
@@ -10,6 +12,7 @@ const BookDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const { wishlistIds, toggleWishlist } = useAuth();
   const [book, setBook] = useState(null);
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
@@ -99,20 +102,26 @@ const BookDetail = () => {
             </div>
           )}
 
-          <div className="bd-actions">
-            <div className="bd-qty">
-              <button onClick={() => setQty(q => Math.max(1, q - 1))}>−</button>
-              <span>{qty}</span>
-              <button onClick={() => setQty(q => q + 1)}>+</button>
+            <div className="bd-actions">
+              <div className="bd-qty">
+                <button onClick={() => setQty(q => Math.max(1, q - 1))}>−</button>
+                <span>{qty}</span>
+                <button onClick={() => setQty(q => q + 1)}>+</button>
+              </div>
+              <button 
+                className="btn bd-add-btn btn-navy"
+                onClick={handleAdd}
+              >
+                {added ? '✓ Added' : 'Add to Cart'}
+              </button>
+              <button
+                className="btn bd-wish-btn btn-outline"
+                onClick={() => toggleWishlist(book.id)}
+                title="Add to Wishlist"
+              >
+                {wishlistIds.includes(book.id) ? '❤️ Liked' : '🤍 Like'}
+              </button>
             </div>
-            <button 
-              className="btn bd-add-btn btn-red"
-              disabled
-              style={{ opacity: 0.7, cursor: 'not-allowed' }}
-            >
-              ⏳ Coming Soon
-            </button>
-          </div>
 
           <div className="bd-details-box">
             <h3>Book Details</h3>
