@@ -28,7 +28,6 @@ const Navbar = () => {
     { label: 'Thriller', value: 'Thriller' },
     { label: 'Romance', value: 'Romance' },
     { label: 'Biography', value: 'Biography' },
-    { label: 'Science', value: 'Science' },
     { label: 'History', value: 'History' },
     { label: 'Textbooks', value: 'Textbook' },
   ];

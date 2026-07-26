@@ -11,7 +11,6 @@ const CATEGORIES = [
   { icon: '🏆', name: 'Bestsellers' },
   { icon: '🔍', name: 'Thriller' },
   { icon: '💑', name: 'Romance' },
-  { icon: '🧬', name: 'Science' },
   { icon: '🕰️', name: 'History' },
   { icon: '💼', name: 'Business' },
   { icon: '🎓', name: 'Textbook' },
