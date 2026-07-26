@@ -1,0 +1,14 @@
+{
+  "books": [
+    { "id": 1, "title": "The Very Hungry Caterpillar", "author": "Eric Carle", "category": "Kids", "price": "149", "oldPrice": "299", "coverUrl": "https://m.media-amazon.com/images/I/91vnzZO5yPL._AC_UF1000,1000_QL80_.jpg", "badge": "Best", "condition": "New" },
+    { "id": 2, "title": "Harry Potter and the Philosopher's Stone", "author": "J.K. Rowling", "category": "Kids", "price": "399", "oldPrice": "599", "coverUrl": "https://m.media-amazon.com/images/I/81q77Q39nEL._AC_UF1000,1000_QL80_.jpg", "badge": "Sale", "condition": "Good" },
+    { "id": 3, "title": "The Gruffalo", "author": "Julia Donaldson", "category": "Kids", "price": "199", "oldPrice": "350", "coverUrl": "https://m.media-amazon.com/images/I/81vN1P0nVAL._AC_UF1000,1000_QL80_.jpg", "badge": "", "condition": "Like New" },
+    { "id": 4, "title": "1984", "author": "George Orwell", "category": "Adults", "price": "299", "oldPrice": "499", "coverUrl": "https://m.media-amazon.com/images/I/71kxa1-0mfL._AC_UF1000,1000_QL80_.jpg", "badge": "Best", "condition": "New" },
+    { "id": 5, "title": "The Thursday Murder Club", "author": "Richard Osman", "category": "Adults", "price": "450", "oldPrice": "799", "coverUrl": "https://m.media-amazon.com/images/I/81X4RSCKz2L._AC_UF1000,1000_QL80_.jpg", "badge": "New", "condition": "Like New" },
+    { "id": 6, "title": "Atomic Habits", "author": "James Clear", "category": "Adults", "price": "350", "oldPrice": "599", "coverUrl": "https://m.media-amazon.com/images/I/81YkqyaFVEL._AC_UF1000,1000_QL80_.jpg", "badge": "Sale", "condition": "Good" },
+    { "id": 7, "title": "Charlie and the Chocolate Factory", "author": "Roald Dahl", "category": "Kids", "price": "250", "oldPrice": "399", "coverUrl": "https://m.media-amazon.com/images/I/81xY0pDkENL._AC_UF1000,1000_QL80_.jpg", "badge": "", "condition": "Acceptable" },
+    { "id": 8, "title": "The Psychology of Money", "author": "Morgan Housel", "category": "Adults", "price": "320", "oldPrice": "499", "coverUrl": "https://m.media-amazon.com/images/I/71g2ednj0JL._AC_UF1000,1000_QL80_.jpg", "badge": "Best", "condition": "New" },
+    { "id": 9, "title": "Calculus: Early Transcendentals", "author": "James Stewart", "category": "Textbook", "price": "899", "oldPrice": "1599", "coverUrl": "https://m.media-amazon.com/images/I/81t-4J3sKBL._AC_UF1000,1000_QL80_.jpg", "badge": "New", "condition": "Like New" },
+    { "id": 10, "title": "Campbell Biology", "author": "Lisa A. Urry", "category": "Textbook", "price": "1200", "oldPrice": "2499", "coverUrl": "https://m.media-amazon.com/images/I/91C1E6eL-9L._AC_UF1000,1000_QL80_.jpg", "badge": "", "condition": "Good" }
+  ]
+}

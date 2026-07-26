@@ -1,16 +1,24 @@
 import { useState } from 'react';
-import { Link, useLocation, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useSearchParams, useNavigate } from 'react-router-dom';
 import { useCart } from '../App';
+import { useAdmin } from '../utils/AdminContext';
 import './Navbar.css';
 
 const Navbar = () => {
   const { totalCount } = useCart();
+  const { isAdmin, logout } = useAdmin();
   const [query, setQuery] = useState('');
   const location = useLocation();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const activeCat = searchParams.get('cat') || '';
 
   const handleSearch = (e) => { e.preventDefault(); };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
 
   const categories = [
     { label: '🏠 All Books', value: 'All' },
@@ -22,6 +30,7 @@ const Navbar = () => {
     { label: 'Biography', value: 'Biography' },
     { label: 'Science', value: 'Science' },
     { label: 'History', value: 'History' },
+    { label: 'Textbooks', value: 'Textbook' },
   ];
 
   return (
@@ -34,6 +43,7 @@ const Navbar = () => {
             <Link to="/">Track Order</Link>
             <Link to="/">FAQs</Link>
             <Link to="/">Contact Us</Link>
+            {isAdmin && <span className="admin-badge-bar">🔑 Admin Mode</span>}
           </div>
         </div>
       </div>
@@ -61,14 +71,27 @@ const Navbar = () => {
           </form>
 
           <div className="nav-right">
-            <Link to="/manage" className="nav-action-link">
-              <span className="nav-action-icon">⚙️</span>
-              <span>Manage Books</span>
-            </Link>
-            <Link to="/add-book" className="nav-action-link">
-              <span className="nav-action-icon">📋</span>
-              <span>List a Book</span>
-            </Link>
+            {isAdmin ? (
+              <>
+                <Link to="/manage" className="nav-action-link admin-link">
+                  <span className="nav-action-icon">⚙️</span>
+                  <span>Manage</span>
+                </Link>
+                <Link to="/add-book" className="nav-action-link admin-link">
+                  <span className="nav-action-icon">📋</span>
+                  <span>Add Book</span>
+                </Link>
+                <button className="nav-action-link nav-logout-btn" onClick={handleLogout}>
+                  <span className="nav-action-icon">🚪</span>
+                  <span>Logout</span>
+                </button>
+              </>
+            ) : (
+              <Link to="/admin" className="nav-action-link" title="Admin Login">
+                <span className="nav-action-icon">👤</span>
+                <span>Admin</span>
+              </Link>
+            )}
             <Link to="/cart" className="nav-cart-btn" id="nav-cart-btn">
               <span className="cart-icon-wrap">
                 🛒

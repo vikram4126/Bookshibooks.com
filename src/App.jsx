@@ -1,5 +1,6 @@
 import { useState, createContext, useContext } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AdminProvider, useAdmin } from './utils/AdminContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './pages/Home';
@@ -7,13 +8,19 @@ import AddBook from './pages/AddBook';
 import CartPage from './pages/CartPage';
 import BookDetail from './pages/BookDetail';
 import ManageBooks from './pages/ManageBooks';
+import AdminLogin from './pages/AdminLogin';
 import './App.css';
 
 export const CartContext = createContext(null);
-
 export const useCart = () => useContext(CartContext);
 
-function App() {
+// Protected route wrapper for admin pages
+const AdminRoute = ({ element }) => {
+  const { isAdmin } = useAdmin();
+  return isAdmin ? element : <Navigate to="/admin" replace />;
+};
+
+function AppContent() {
   const [cartItems, setCartItems] = useState([]);
   const [toastMsg, setToastMsg] = useState('');
 
@@ -48,11 +55,17 @@ function App() {
           <Navbar />
           <main className="app-main">
             <Routes>
+              {/* User Routes */}
               <Route path="/" element={<Home />} />
               <Route path="/book/:id" element={<BookDetail />} />
-              <Route path="/manage" element={<ManageBooks />} />
-              <Route path="/add-book" element={<AddBook />} />
               <Route path="/cart" element={<CartPage />} />
+
+              {/* Admin Login */}
+              <Route path="/admin" element={<AdminLogin />} />
+
+              {/* Protected Admin Routes */}
+              <Route path="/manage" element={<AdminRoute element={<ManageBooks />} />} />
+              <Route path="/add-book" element={<AdminRoute element={<AddBook />} />} />
             </Routes>
           </main>
           <Footer />
@@ -64,6 +77,14 @@ function App() {
         )}
       </Router>
     </CartContext.Provider>
+  );
+}
+
+function App() {
+  return (
+    <AdminProvider>
+      <AppContent />
+    </AdminProvider>
   );
 }
 

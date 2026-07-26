@@ -18,6 +18,7 @@ const BookCard = ({ book }) => {
           alt={book.title}
           className="bcard-img"
           loading="lazy"
+          onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=240&h=360'; }}
         />
         {discount && <span className="bcard-discount">-{discount}%</span>}
         {book.badge && !discount && (
@@ -38,6 +39,9 @@ const BookCard = ({ book }) => {
       {/* Info */}
       <div className="bcard-body">
         <h3 className="bcard-title" title={book.title}>{book.title}</h3>
+        {book.condition && (
+          <span className="bcard-condition-text">Condition: {book.condition}</span>
+        )}
         
         <div className="bcard-price-row">
           <span className="bcard-price">₹{Number(book.price).toLocaleString('en-IN')}</span>

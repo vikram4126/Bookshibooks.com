@@ -12,7 +12,15 @@
 .addbook-form-card { background: var(--surface); border-radius: var(--radius-lg); padding: 36px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); }
 .form-heading { font-size: 1.25rem; font-weight: 800; margin-bottom: 24px; color: var(--text-1); font-family: 'Plus Jakarta Sans', sans-serif; }
 .addbook-form { display: flex; flex-direction: column; gap: 20px; }
-.form-group { display: flex; flex-direction: column; gap: 6px; }
+.addbook-form-wrapper { display: flex; flex-direction: column; gap: 24px; }
+.form-divider { border: 0; border-top: 1px solid var(--border); margin: 0; }
+.isbn-section { background: var(--bg); padding: 20px; border-radius: 8px; border: 1px dashed var(--primary); }
+.isbn-input-group { display: flex; gap: 12px; margin-top: 12px; }
+.isbn-input-group input { flex: 1; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius); outline: none; }
+.isbn-input-group input:focus { border-color: var(--primary); }
+.isbn-input-group button { padding: 0 24px; white-space: nowrap; }
+
+.form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
 .form-group label { font-size: 0.85rem; font-weight: 700; color: var(--text-2); }
 .form-group input, .form-group select { padding: 11px 14px; border: 1.5px solid var(--border); border-radius: var(--radius); font-family: inherit; font-size: 0.9rem; transition: border-color 0.2s; background: var(--bg); }
 .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary); background: white; }

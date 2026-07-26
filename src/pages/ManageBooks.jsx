@@ -7,18 +7,18 @@ const ManageBooks = () => {
   const [books, setBooks] = useState([]);
 
   useEffect(() => {
-    setBooks(getBooks());
+    getBooks().then(data => setBooks(data));
   }, []);
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to remove this book?")) {
-      const updated = deleteBook(id);
+      const updated = await deleteBook(id);
       setBooks(updated);
     }
   };
 
   return (
-    <div className="manage-page container fade-up">
+    <main className="manage-page container fade-up">
       <div className="manage-header">
         <h1 className="manage-title">Manage Books</h1>
         <Link to="/add-book" className="btn btn-navy">📋 Add New Book</Link>
@@ -73,7 +73,7 @@ const ManageBooks = () => {
           </div>
         )}
       </div>
-    </div>
+    </main>
   );
 };
 

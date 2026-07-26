@@ -4,6 +4,8 @@ import { getBookById } from '../utils/storage';
 import { useCart } from '../App';
 import './BookDetail.css';
 
+const PLACEHOLDER = 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=400&h=600';
+
 const BookDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -11,10 +13,14 @@ const BookDetail = () => {
   const [book, setBook] = useState(null);
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
+  const [imgSrc, setImgSrc] = useState(PLACEHOLDER);
 
   useEffect(() => {
-    const found = getBookById(id);
-    if (found) setBook(found);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    getBookById(id).then(data => {
+      setBook(data);
+      setImgSrc(data?.coverUrl || PLACEHOLDER);
+    });
   }, [id]);
 
   if (!book) return <div className="container" style={{padding: '100px 20px', textAlign: 'center'}}>Loading...</div>;
@@ -32,14 +38,19 @@ const BookDetail = () => {
   };
 
   return (
-    <div className="book-detail-page container fade-up">
+    <article className="book-detail-page container fade-up">
       <button className="back-btn" onClick={() => navigate(-1)}>← Back</button>
       
       <div className="bd-layout">
         {/* Left: Image */}
         <div className="bd-image-col">
           <div className="bd-image-wrap">
-            <img src={book.coverUrl} alt={book.title} />
+            <img 
+              src={imgSrc} 
+              alt={book.title}
+              className="bdetail-img"
+              onError={() => setImgSrc(PLACEHOLDER)}
+            />
             {book.badge && <span className={`bd-badge bd-badge-${book.badge.toLowerCase()}`}>{book.badge}</span>}
           </div>
         </div>
@@ -79,6 +90,15 @@ const BookDetail = () => {
             <span>🇬🇧 UK Imported</span>
           </div>
 
+          {book.quantity && (
+            <div className="bd-stock-row">
+              {Number(book.quantity) <= 3
+                ? <span className="bd-stock bd-stock-low">⚠️ Only {book.quantity} left in stock!</span>
+                : <span className="bd-stock bd-stock-ok">✅ {book.quantity} copies available</span>
+              }
+            </div>
+          )}
+
           <div className="bd-actions">
             <div className="bd-qty">
               <button onClick={() => setQty(q => Math.max(1, q - 1))}>−</button>
@@ -86,10 +106,11 @@ const BookDetail = () => {
               <button onClick={() => setQty(q => q + 1)}>+</button>
             </div>
             <button 
-              className={`btn bd-add-btn ${added ? 'added' : 'btn-red'}`} 
-              onClick={handleAdd}
+              className="btn bd-add-btn btn-red"
+              disabled
+              style={{ opacity: 0.7, cursor: 'not-allowed' }}
             >
-              {added ? '✓ Added to Cart' : '🛒 Add to Cart'}
+              ⏳ Coming Soon
             </button>
           </div>
 
@@ -98,14 +119,14 @@ const BookDetail = () => {
             <div className="bd-detail-grid">
               <div className="bd-detail-item"><span>Format</span><span>Paperback</span></div>
               <div className="bd-detail-item"><span>Language</span><span>English</span></div>
-              <div className="bd-detail-item"><span>Condition</span><span>Good/Like New</span></div>
+              <div className="bd-detail-item"><span>Condition</span><span>{book.condition || 'Like New'}</span></div>
               <div className="bd-detail-item"><span>Origin</span><span>United Kingdom</span></div>
             </div>
           </div>
 
         </div>
       </div>
-    </div>
+    </article>
   );
 };
 

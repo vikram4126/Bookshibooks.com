@@ -14,6 +14,7 @@ const CATEGORIES = [
   { icon: '🧬', name: 'Science' },
   { icon: '🕰️', name: 'History' },
   { icon: '💼', name: 'Business' },
+  { icon: '🎓', name: 'Textbook' },
 ];
 
 const Home = () => {
@@ -22,7 +23,7 @@ const Home = () => {
   const activeCat = searchParams.get('cat') || 'All';
 
   useEffect(() => {
-    setBooks(getBooks());
+    getBooks().then(data => setBooks(data));
   }, []);
 
   const bestsellers = books.filter(b => b.badge === 'Best');
@@ -30,12 +31,14 @@ const Home = () => {
   const onSale     = books.filter(b => b.oldPrice);
   const kids       = books.filter(b => b.category === 'Kids');
   const adults     = books.filter(b => b.category === 'Adults');
+  const textbooks  = books.filter(b => b.category === 'Textbook');
 
   // Active category filter for the "All Books" grid
   const filteredBooks = (() => {
     switch (activeCat) {
       case 'Kids':     return kids;
       case 'Adults':   return adults;
+      case 'Textbook': return textbooks;
       case 'Sale':     return onSale;
       case 'New':      return newArrivals;
       case 'All':
@@ -46,7 +49,7 @@ const Home = () => {
   const isFiltered = activeCat !== 'All';
 
   return (
-    <div className="home">
+    <main className="home">
       {/* ── Hero ── */}
       <section className="hero">
         <div className="container hero-inner">
@@ -94,7 +97,7 @@ const Home = () => {
         <div className="container section-wrap">
           <div className="section-header">
             <h2 className="section-title">
-              {activeCat === 'Kids' ? '🧒' : activeCat === 'Adults' ? '📗' : activeCat === 'Sale' ? '🔥' : '✨'} {activeCat} Books
+              {activeCat === 'Kids' ? '🧒' : activeCat === 'Adults' ? '📗' : activeCat === 'Textbook' ? '🎓' : activeCat === 'Sale' ? '🔥' : '✨'} {activeCat === 'Textbook' ? 'Textbooks' : `${activeCat} Books`}
             </h2>
             <Link to="/" className="see-all-link">← Back to All</Link>
           </div>
@@ -190,6 +193,17 @@ const Home = () => {
             </div>
           )}
 
+          {/* ── Textbooks SLIDER ── */}
+          {textbooks.length > 0 && (
+            <div className="container section-wrap">
+              <div className="section-header">
+                <h2 className="section-title">🎓 Textbooks</h2>
+                <Link to="/?cat=Textbook" className="see-all-link">See All →</Link>
+              </div>
+              <BookSlider books={textbooks} />
+            </div>
+          )}
+
           {/* ── All Books grid (default) ── */}
           <div className="container section-wrap">
             <div className="section-header">
@@ -222,7 +236,7 @@ const Home = () => {
           ))}
         </div>
       </div>
-    </div>
+    </main>
   );
 };
 
