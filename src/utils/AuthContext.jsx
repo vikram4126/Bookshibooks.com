@@ -16,6 +16,7 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isWorker, setIsWorker] = useState(false);
   const [wishlistIds, setWishlistIds] = useState([]);
   const [authLoading, setAuthLoading] = useState(true);
 
@@ -37,16 +38,19 @@ export const AuthProvider = ({ children }) => {
             role: 'user'
           });
           setIsAdmin(false);
+          setIsWorker(false);
           setWishlistIds([]);
         } else {
           const data = docSnap.data();
-          // Read role from Firestore — 'admin' = true, anything else = false
+          // Read role from Firestore
           setIsAdmin(data.role === 'admin');
+          setIsWorker(data.role === 'worker');
           setWishlistIds(data.wishlist || []);
         }
       } else {
         setUser(null);
         setIsAdmin(false);
+        setIsWorker(false);
         setWishlistIds([]);
       }
       setAuthLoading(false);
@@ -101,7 +105,17 @@ export const AuthProvider = ({ children }) => {
   if (authLoading) return null;
 
   return (
-    <AuthContext.Provider value={{ user, isAdmin, wishlistIds, toggleWishlist, loginAdmin, loginWithGoogle, logout }}>
+    <AuthContext.Provider value={{
+      user,
+      isAdmin,
+      isWorker,
+      wishlistIds,
+      authLoading,
+      toggleWishlist,
+      loginWithGoogle,
+      loginAdmin,
+      logout
+    }}>
       {children}
     </AuthContext.Provider>
   );

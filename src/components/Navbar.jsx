@@ -10,7 +10,7 @@ import './Navbar.css';
 
 const Navbar = () => {
   const { totalCount } = useCart();
-  const { user, isAdmin, loginWithGoogle, logout } = useAuth();
+  const { user, isAdmin, isWorker, loginWithGoogle, logout } = useAuth();
   const [query, setQuery] = useState('');
   const location = useLocation();
   const navigate = useNavigate();
@@ -53,6 +53,7 @@ const Navbar = () => {
             <Link to="/">FAQs</Link>
             <Link to="/">Contact Us</Link>
             {isAdmin && <span className="admin-badge-bar"><Key size={14} className="mr-1"/> Admin Mode</span>}
+            {isWorker && <span className="admin-badge-bar" style={{background:'#059669'}}>⚡ Worker Mode</span>}
           </div>
         </div>
       </div>
@@ -105,6 +106,14 @@ const Navbar = () => {
                   <span>Add Book</span>
                 </Link>
               </>
+            )}
+
+            {/* Worker nav: only Add Book */}
+            {isWorker && !isAdmin && (
+              <Link to="/add-book" className="nav-action-link admin-link">
+                <span className="nav-action-icon"><PlusCircle size={20} /></span>
+                <span>Add Book</span>
+              </Link>
             )}
 
             {user ? (

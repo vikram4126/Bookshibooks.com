@@ -9,22 +9,22 @@ const AdminLogin = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [waitingForAuth, setWaitingForAuth] = useState(false);
-  const { loginAdmin, isAdmin, user } = useAuth();
+  const { loginAdmin, isAdmin, isWorker } = useAuth();
   const navigate = useNavigate();
 
-  // Once isAdmin becomes true after login, redirect to manage
+  // Once isAdmin/isWorker becomes true after login, redirect
   useEffect(() => {
-    if (waitingForAuth && isAdmin) {
-      navigate('/manage');
+    if (waitingForAuth) {
+      if (isAdmin) navigate('/manage');
+      else if (isWorker) navigate('/add-book');
     }
-  }, [isAdmin, waitingForAuth, navigate]);
+  }, [isAdmin, isWorker, waitingForAuth, navigate]);
 
-  // If already logged in as admin, redirect right away
+  // If already logged in, redirect right away
   useEffect(() => {
-    if (isAdmin) {
-      navigate('/manage');
-    }
-  }, []);
+    if (isAdmin) navigate('/manage');
+    else if (isWorker) navigate('/add-book');
+  }, [isAdmin, isWorker, navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -56,8 +56,8 @@ const AdminLogin = () => {
     <main className="admin-login-page">
       <div className="admin-login-box">
         <div className="admin-login-icon">🔐</div>
-        <h1>Admin Login</h1>
-        <p>BookshiBooks Management Panel</p>
+        <h1>Staff Login</h1>
+        <p>BookshiBooks Management & Worker Panel</p>
         <form onSubmit={handleLogin}>
           <div className="al-field">
             <label htmlFor="admin-email">Email</label>

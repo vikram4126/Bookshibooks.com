@@ -25,6 +25,11 @@ const AdminRoute = ({ element }) => {
   return isAdmin ? element : <Navigate to="/admin" replace />;
 };
 
+const AdminOrWorkerRoute = ({ element }) => {
+  const { isAdmin, isWorker } = useAuth();
+  return (isAdmin || isWorker) ? element : <Navigate to="/admin" replace />;
+};
+
 function AppContent() {
   const [cartItems, setCartItems] = useState([]);
   const [toastMsg, setToastMsg] = useState('');
@@ -74,7 +79,7 @@ function AppContent() {
 
               {/* Protected Admin Routes */}
               <Route path="/manage" element={<AdminRoute element={<ManageBooks />} />} />
-              <Route path="/add-book" element={<AdminRoute element={<AddBook />} />} />
+              <Route path="/add-book" element={<AdminOrWorkerRoute element={<AddBook />} />} />
               <Route path="/settings" element={<AdminRoute element={<AdminSettings />} />} />
               <Route path="/admin/orders" element={<AdminRoute element={<AdminOrders />} />} />
               <Route path="/admin/users" element={<AdminRoute element={<AdminUsers />} />} />
