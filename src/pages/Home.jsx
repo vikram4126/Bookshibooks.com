@@ -76,7 +76,6 @@ const Home = () => {
             </p>
             <div className="hero-actions">
               <Link to="/?cat=All" className="btn btn-red">Shop All Books</Link>
-              <Link to="/add-book" className="btn btn-outline-white">List a Book</Link>
             </div>
             <div className="hero-stats">
               <div><div className="hero-stat-num">10K+</div><div className="hero-stat-label">UK Books Available</div></div>
