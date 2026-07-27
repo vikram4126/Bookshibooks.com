@@ -21,9 +21,18 @@ const BookDetail = () => {
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    getBookById(id).then(data => {
-      setBook(data);
-      setImgSrc(data?.coverUrl || PLACEHOLDER);
+    const docRef = doc(db, 'books', id);
+    getDoc(docRef).then(docSnap => {
+      if (docSnap.exists()) {
+        const data = { id: docSnap.id, ...docSnap.data() };
+        setBook(data);
+        setImgSrc(data.coverUrl || data.image || PLACEHOLDER);
+      } else {
+        setBook(null);
+      }
+    }).catch(err => {
+      console.error(err);
+      setBook(null);
     });
   }, [id]);
 
@@ -94,35 +103,43 @@ const BookDetail = () => {
             <span><MapPin size={16} style={{marginRight: 6}}/> UK Imported</span>
           </div>
 
-          {book.quantity && (
+          {book.quantity !== undefined && (
             <div className="bd-stock-row">
-              {Number(book.quantity) <= 3
-                ? <span className="bd-stock bd-stock-low"><AlertTriangle size={16} style={{marginRight: 4}}/> Only {book.quantity} left in stock!</span>
-                : <span className="bd-stock bd-stock-ok"><CheckCircle size={16} style={{marginRight: 4}}/> {book.quantity} copies available</span>
-              }
+              {Number(book.quantity) <= 0 ? (
+                <span className="bd-stock bd-stock-out" style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: '600' }}>
+                  <AlertTriangle size={16} /> Out of Stock
+                </span>
+              ) : Number(book.quantity) <= 3 ? (
+                <span className="bd-stock bd-stock-low"><AlertTriangle size={16} style={{marginRight: 4}}/> Only {book.quantity} left in stock!</span>
+              ) : (
+                <span className="bd-stock bd-stock-ok"><CheckCircle size={16} style={{marginRight: 4}}/> {book.quantity} copies available</span>
+              )}
             </div>
           )}
 
-            <div className="bd-actions">
+          <div className="bd-actions">
+            {Number(book.quantity) > 0 && (
               <div className="bd-qty">
                 <button onClick={() => setQty(q => Math.max(1, q - 1))}>−</button>
                 <span>{qty}</span>
                 <button onClick={() => setQty(q => q + 1)}>+</button>
               </div>
-              <button 
-                className="btn bd-add-btn btn-navy"
-                onClick={handleAdd}
-              >
-                {added ? <><Check size={18} style={{marginRight: 4}}/> Added</> : 'Add to Cart'}
-              </button>
-              <button
-                className="btn bd-wish-btn btn-outline"
-                onClick={() => toggleWishlist(book.id)}
-                title="Add to Wishlist"
-              >
-                <Heart size={20} fill={wishlistIds.includes(book.id) ? 'currentColor' : 'none'} />
-              </button>
-            </div>
+            )}
+            <button 
+              className="btn bd-add-btn btn-navy"
+              onClick={handleAdd}
+              disabled={Number(book.quantity) <= 0}
+            >
+              {Number(book.quantity) <= 0 ? 'Out of Stock' : added ? <><Check size={18} style={{marginRight: 4}}/> Added</> : 'Add to Cart'}
+            </button>
+            <button
+              className="btn bd-wish-btn btn-outline"
+              onClick={() => toggleWishlist(book.id)}
+              title="Add to Wishlist"
+            >
+              <Heart size={20} fill={wishlistIds.includes(book.id) ? 'currentColor' : 'none'} />
+            </button>
+          </div>
 
           <div className="bd-details-box">
             <h3>Book Details</h3>

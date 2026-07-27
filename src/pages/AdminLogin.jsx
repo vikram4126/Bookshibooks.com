@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../utils/AuthContext';
 import './AdminLogin.css';
@@ -8,8 +8,23 @@ const AdminLogin = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { loginAdmin } = useAuth();
+  const [waitingForAuth, setWaitingForAuth] = useState(false);
+  const { loginAdmin, isAdmin, user } = useAuth();
   const navigate = useNavigate();
+
+  // Once isAdmin becomes true after login, redirect to manage
+  useEffect(() => {
+    if (waitingForAuth && isAdmin) {
+      navigate('/manage');
+    }
+  }, [isAdmin, waitingForAuth, navigate]);
+
+  // If already logged in as admin, redirect right away
+  useEffect(() => {
+    if (isAdmin) {
+      navigate('/manage');
+    }
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -17,12 +32,25 @@ const AdminLogin = () => {
     setError('');
     const result = await loginAdmin(email, password);
     if (result.success) {
-      navigate('/manage');
+      // Start waiting — useEffect above will redirect once Firestore confirms admin role
+      setWaitingForAuth(true);
     } else {
       setError(result.error);
+      setLoading(false);
     }
-    setLoading(false);
   };
+
+  if (waitingForAuth) {
+    return (
+      <main className="admin-login-page">
+        <div className="admin-login-box" style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '2rem', marginBottom: '16px' }}>🔄</div>
+          <h2>Verifying Admin Access...</h2>
+          <p style={{ color: 'var(--text-3)', marginTop: '8px' }}>Please wait a moment</p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="admin-login-page">
@@ -66,3 +94,4 @@ const AdminLogin = () => {
 };
 
 export default AdminLogin;
+

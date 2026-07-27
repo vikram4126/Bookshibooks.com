@@ -21,12 +21,30 @@ const CATEGORY_SECTIONS = [
 const Home = () => {
   const [books, setBooks] = useState([]);
   const [bannerText, setBannerText] = useState('Use Code WELCOME10 — Get 10% off your first order!  ·  Free delivery on orders above ₹999');
+  const [promos, setPromos] = useState([]);
 
   useEffect(() => {
     getBooks().then(data => setBooks(data));
     getDoc(doc(db, 'settings', 'site')).then(docSnap => {
-      if (docSnap.exists() && docSnap.data().homeBannerText) {
-        setBannerText(docSnap.data().homeBannerText);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.homeBannerText) setBannerText(data.homeBannerText);
+        if (data.promos && data.promos.length > 0) {
+          setPromos(data.promos.filter(p => p.image));
+        } else {
+          // Fallback to legacy structure if they haven't saved yet
+          if (data.summerBanner || data.kidsBanner) {
+            setPromos([
+              { image: data.summerBanner || '/summer-banner.png', link: '/shop' },
+              { image: data.kidsBanner || '/kids-banner.png', link: '/shop?category=Children' }
+            ]);
+          } else {
+            setPromos([
+              { image: '/summer-banner.png', link: '/shop' },
+              { image: '/kids-banner.png', link: '/shop?category=Children' }
+            ]);
+          }
+        }
       }
     });
   }, []);
@@ -98,12 +116,16 @@ const Home = () => {
         </div>
       )}
 
-      {/* ── Summer Sale BANNER ── */}
-      <div className="container promo-banner-wrap">
-        <Link to="/shop" className="promo-banner-img-link">
-          <img src="/summer-banner.png" alt="Summer Reading Sale - Up to 50% Off" className="promo-banner-img" />
-        </Link>
-      </div>
+      {/* ── Dynamic Promo BANNERS ── */}
+      {promos.length > 0 && (
+        <div className="container dual-banner-wrap" style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fit, minmax(${promos.length > 2 ? '250px' : '300px'}, 1fr))`, gap: '20px' }}>
+          {promos.map((promo, idx) => (
+            <Link key={idx} to={promo.link || '/shop'} className="dual-banner-link">
+              <img src={promo.image} alt={`Promo ${idx+1}`} className="dual-banner-img" />
+            </Link>
+          ))}
+        </div>
+      )}
 
       {/* ── Fiction Slider ── */}
       {getCategoryBooks('Fiction').length > 0 && (
@@ -133,12 +155,6 @@ const Home = () => {
         </div>
       )}
 
-      {/* ── Kids BANNER ── */}
-      <div className="container promo-banner-wrap">
-        <Link to="/shop?category=Children" className="promo-banner-img-link">
-          <img src="/kids-banner.png" alt="Kids Collection - Discover Magical Worlds" className="promo-banner-img" />
-        </Link>
-      </div>
 
       {/* ── Thriller Slider ── */}
       {getCategoryBooks('Thriller').length > 0 && (

@@ -53,11 +53,13 @@ const Shop = () => {
     getBooks().then(data => { setAllBooks(data); setLoading(false); });
   }, []);
 
-  // Sync category from URL param on first load
+  // Sync category and search query from URL param
   useEffect(() => {
     const cat = searchParams.get('category');
     if (cat) setSelectedCats([cat]);
-  }, []);
+    const q = searchParams.get('q');
+    if (q) setSearch(q);
+  }, [searchParams]);
 
   const toggleFilter = (arr, setArr, val) => {
     setArr(prev => prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]);

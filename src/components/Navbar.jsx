@@ -4,7 +4,7 @@ import { useCart } from '../App';
 import { useAuth } from '../utils/AuthContext';
 import { 
   Search, Settings, PlusCircle, User, ShoppingCart, 
-  BookOpen, LogIn, Key, BookType
+  BookOpen, LogIn, Key, BookType, ShoppingBag
 } from 'lucide-react';
 import './Navbar.css';
 
@@ -17,7 +17,13 @@ const Navbar = () => {
   const [searchParams] = useSearchParams();
   const activeCat = searchParams.get('cat') || '';
 
-  const handleSearch = (e) => { e.preventDefault(); };
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (query.trim()) {
+      navigate(`/shop?q=${encodeURIComponent(query)}`);
+      setQuery(''); // optional: clear after search
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -81,6 +87,14 @@ const Navbar = () => {
                 <Link to="/settings" className="nav-action-link admin-link">
                   <span className="nav-action-icon"><Settings size={20} /></span>
                   <span>Settings</span>
+                </Link>
+                <Link to="/admin/orders" className="nav-action-link admin-link">
+                  <span className="nav-action-icon"><ShoppingBag size={20} /></span>
+                  <span>Orders</span>
+                </Link>
+                <Link to="/admin/users" className="nav-action-link admin-link">
+                  <span className="nav-action-icon"><User size={20} /></span>
+                  <span>Users</span>
                 </Link>
                 <Link to="/manage" className="nav-action-link admin-link">
                   <span className="nav-action-icon"><BookOpen size={20} /></span>

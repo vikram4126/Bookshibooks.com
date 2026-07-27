@@ -1,74 +1,198 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { addBook } from '../utils/storage';
+import { db } from '../utils/firebase';
+import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
+import { compressAndUploadImage } from '../utils/imageUpload';
+import { UploadCloud } from 'lucide-react';
 import './AddBook.css';
 
 const AddBook = () => {
   const navigate = useNavigate();
   const [isbn, setIsbn] = useState('');
   const [loading, setLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [form, setForm] = useState({ 
     title: '', author: '', category: 'Kids', condition: 'New', 
     price: '', oldPrice: '', coverUrl: '', badge: '', quantity: '1'
   });
   const [submitted, setSubmitted] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  
+  // Rapid Scan Mode States
+  const [isRapidMode, setIsRapidMode] = useState(false);
+  const [successScans, setSuccessScans] = useState([]);
+  const [failedScans, setFailedScans] = useState([]);
+
+  const playSound = (type) => {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      osc.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      if (type === 'success') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(800, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1);
+        gainNode.gain.setValueAtTime(0.1, ctx.currentTime);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.1);
+      } else {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(150, ctx.currentTime);
+        gainNode.gain.setValueAtTime(0.1, ctx.currentTime);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.3);
+      }
+    } catch (e) {
+      console.log('Audio not supported', e);
+    }
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploadingImage(true);
+    try {
+      const url = await compressAndUploadImage(file, 'books');
+      setForm(prev => ({ ...prev, coverUrl: url }));
+    } catch (err) {
+      console.error(err);
+      alert('Failed to upload image.');
+    }
+    setUploadingImage(false);
+  };
 
   const handleChange = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
 
   // Magic ISBN Fetcher with Fallback (Google -> Open Library)
   const handleFetchIsbn = async () => {
     if (!isbn) {
-      setErrorMsg("Please enter an ISBN number first.");
+      if (!isRapidMode) setErrorMsg("Please enter an ISBN number first.");
       return;
     }
+    const currentIsbn = isbn;
     setLoading(true);
     setErrorMsg('');
     try {
+      // Step 0: Check if book already exists in DB
+      const q = query(collection(db, 'books'), where("isbn", "==", currentIsbn));
+      const snap = await getDocs(q);
+      
+      if (!snap.empty) {
+        // Book already exists! Just increment quantity
+        const existingDoc = snap.docs[0];
+        const existingData = existingDoc.data();
+        const currentQty = Number(existingData.quantity || 0);
+        await updateDoc(doc(db, 'books', existingDoc.id), { quantity: currentQty + 1 });
+        
+        if (isRapidMode) {
+          setSuccessScans(prev => [{ isbn: currentIsbn, title: `(Qty +1) ${existingData.title}` }, ...prev]);
+          playSound('success');
+          setIsbn('');
+        } else {
+          setErrorMsg(`Book already exists! We increased its stock to ${currentQty + 1}.`);
+          setForm(prev => ({
+            ...prev,
+            title: existingData.title || prev.title,
+            author: existingData.author || prev.author,
+            coverUrl: existingData.coverUrl || prev.coverUrl,
+          }));
+        }
+        setLoading(false);
+        return;
+      }
+
+      let bookData = null;
+      let cover = '';
+      
       // Step 1: Try Google Books API
-      const googleRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`);
+      const googleRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${currentIsbn}`);
       const googleData = await googleRes.json();
 
       if (googleData.items && googleData.items.length > 0) {
-        const bookData = googleData.items[0].volumeInfo;
-        let cover = bookData.imageLinks?.thumbnail || form.coverUrl;
+        const vInfo = googleData.items[0].volumeInfo;
+        cover = vInfo.imageLinks?.thumbnail || '';
         if (cover && cover.startsWith('http:')) cover = cover.replace('http:', 'https:');
-
-        setForm(prev => ({
-          ...prev,
-          title: bookData.title || prev.title,
-          author: bookData.authors ? bookData.authors.join(', ') : prev.author,
-          coverUrl: cover,
-        }));
-        setLoading(false);
-        return; // Success, exit here
-      }
-      
-      // Step 2: If Google fails, try Open Library API (Fallback)
-      const olRes = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&jscmd=data&format=json`);
-      const olData = await olRes.json();
-      const olBook = olData[`ISBN:${isbn}`];
-
-      if (olBook) {
-        setForm(prev => ({
-          ...prev,
-          title: olBook.title || prev.title,
-          author: olBook.authors ? olBook.authors.map(a => a.name).join(', ') : prev.author,
-          coverUrl: olBook.cover ? olBook.cover.large : prev.coverUrl,
-        }));
+        bookData = {
+          title: vInfo.title,
+          author: vInfo.authors ? vInfo.authors.join(', ') : 'Unknown Author',
+          coverUrl: cover
+        };
       } else {
-        setErrorMsg("Book not found in any database. You can still enter details manually.");
+        // Step 2: Open Library Fallback
+        const olRes = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${currentIsbn}&jscmd=data&format=json`);
+        const olData = await olRes.json();
+        const olBook = olData[`ISBN:${currentIsbn}`];
+        if (olBook) {
+          bookData = {
+            title: olBook.title,
+            author: olBook.authors ? olBook.authors.map(a => a.name).join(', ') : 'Unknown Author',
+            coverUrl: olBook.cover ? olBook.cover.large : ''
+          };
+        }
       }
 
+      if (bookData) {
+        if (isRapidMode) {
+          const oldPrice = 299; // Default MRP
+          const price = Math.floor(oldPrice * 0.5); // 50% discount
+          const newBook = {
+            title: bookData.title,
+            author: bookData.author,
+            category: 'Kids',
+            condition: 'Good',
+            price,
+            oldPrice,
+            coverUrl: bookData.coverUrl,
+            badge: '',
+            quantity: 1,
+            isbn: currentIsbn
+          };
+          await addBook(newBook);
+          setSuccessScans(prev => [{ isbn: currentIsbn, title: bookData.title }, ...prev]);
+          playSound('success');
+          setIsbn('');
+        } else {
+          setForm(prev => ({
+            ...prev,
+            title: bookData.title || prev.title,
+            author: bookData.author || prev.author,
+            coverUrl: bookData.coverUrl || prev.coverUrl,
+          }));
+        }
+      } else {
+        if (isRapidMode) {
+          setFailedScans(prev => [currentIsbn, ...prev]);
+          playSound('error');
+          setIsbn('');
+        } else {
+          setErrorMsg("Book not found in any database. You can still enter details manually.");
+        }
+      }
     } catch (err) {
-      setErrorMsg("Failed to fetch book data. Enter manually.");
+      if (isRapidMode) {
+        setFailedScans(prev => [currentIsbn, ...prev]);
+        playSound('error');
+        setIsbn('');
+      } else {
+        setErrorMsg("Failed to fetch book data. Enter manually.");
+      }
     }
     setLoading(false);
   };
 
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleFetchIsbn();
+    }
+  };
+
   const handleSubmit = async e => {
     e.preventDefault();
-    await addBook(form);
+    await addBook({ ...form, isbn });
     setSubmitted(true);
     setTimeout(() => navigate('/'), 1500);
   };
@@ -89,7 +213,58 @@ const AddBook = () => {
 
         {/* Form */}
         <div className="addbook-form-card fade-up">
-          {submitted ? (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', background: isRapidMode ? '#eef2ff' : '#f8fafc', padding: '16px', borderRadius: '8px', border: isRapidMode ? '2px solid #4f46e5' : '1px solid #e2e8f0' }}>
+            <div>
+              <h3 style={{ margin: 0, color: isRapidMode ? '#4f46e5' : '#334155' }}>⚡ Rapid Barcode Scanner Mode</h3>
+              <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-3)' }}>Automatically list books instantly via scanner.</p>
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+              <input type="checkbox" checked={isRapidMode} onChange={(e) => setIsRapidMode(e.target.checked)} style={{ transform: 'scale(1.5)', marginRight: '10px' }} />
+              <span style={{ fontWeight: '600' }}>Enable</span>
+            </label>
+          </div>
+
+          {isRapidMode ? (
+            <div className="rapid-mode-container" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div className="isbn-input-group" style={{ display: 'flex', gap: '10px' }}>
+                <input 
+                  type="text" 
+                  placeholder="Scan ISBN barcode here..." 
+                  value={isbn} 
+                  onChange={e => setIsbn(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  style={{ flex: 1, padding: '16px', fontSize: '1.2rem', border: '2px solid #4f46e5', borderRadius: '8px', outline: 'none' }}
+                  autoFocus
+                />
+                <button type="button" onClick={handleFetchIsbn} disabled={loading} className="btn btn-navy" style={{ padding: '0 30px', fontSize: '1.1rem' }}>
+                  {loading ? '...' : 'Scan'}
+                </button>
+              </div>
+              <p style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: '0.9rem' }}>Books are automatically added with 50% discount on ₹299 MRP.</p>
+              
+              <div style={{ display: 'flex', gap: '20px' }}>
+                <div style={{ flex: 1, border: '1px solid #e2e8f0', borderRadius: '8px', padding: '16px', background: '#f8fafc', maxHeight: '300px', overflowY: 'auto' }}>
+                  <h4 style={{ color: '#16a34a', margin: '0 0 10px 0' }}>✅ Added ({successScans.length})</h4>
+                  {successScans.map((s, i) => (
+                    <div key={i} style={{ fontSize: '0.85rem', padding: '6px 0', borderBottom: '1px solid #e2e8f0' }}>
+                      <strong>{s.isbn}</strong> - {s.title}
+                    </div>
+                  ))}
+                  {successScans.length === 0 && <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>No books scanned yet.</div>}
+                </div>
+                <div style={{ flex: 1, border: '1px solid #e2e8f0', borderRadius: '8px', padding: '16px', background: '#fef2f2', maxHeight: '300px', overflowY: 'auto' }}>
+                  <h4 style={{ color: '#dc2626', margin: '0 0 10px 0' }}>❌ Failed ({failedScans.length})</h4>
+                  <p style={{ fontSize: '0.75rem', color: '#dc2626', margin: '0 0 10px 0' }}>Not found globally. Add manually later.</p>
+                  {failedScans.map((f, i) => (
+                    <div key={i} style={{ fontSize: '0.85rem', padding: '6px 0', borderBottom: '1px solid #fecaca' }}>
+                      <strong>{f}</strong>
+                    </div>
+                  ))}
+                  {failedScans.length === 0 && <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>No failures!</div>}
+                </div>
+              </div>
+            </div>
+          ) : submitted ? (
             <div className="success-msg">
               <div style={{fontSize:'3rem'}}>✅</div>
               <h3>Book Listed Successfully!</h3>
@@ -107,6 +282,7 @@ const AddBook = () => {
                     placeholder="Enter ISBN (e.g. 9780439554930)" 
                     value={isbn} 
                     onChange={e => setIsbn(e.target.value)}
+                    onKeyDown={handleKeyDown}
                   />
                   <button type="button" onClick={handleFetchIsbn} disabled={loading} className="btn btn-navy">
                     {loading ? 'Fetching...' : '🔍 Fetch Book'}
@@ -182,7 +358,13 @@ const AddBook = () => {
 
                 <div className="form-group">
                   <label htmlFor="coverUrl">Cover Image URL</label>
-                  <input id="coverUrl" name="coverUrl" type="url" placeholder="https://..." value={form.coverUrl} onChange={handleChange} />
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input id="coverUrl" name="coverUrl" type="url" placeholder="https://..." value={form.coverUrl} onChange={handleChange} style={{ flex: 1 }} />
+                    <label className="btn btn-navy" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', opacity: uploadingImage ? 0.7 : 1 }}>
+                      <UploadCloud size={16} /> {uploadingImage ? 'Uploading...' : 'Upload'}
+                      <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageUpload} disabled={uploadingImage} />
+                    </label>
+                  </div>
                 </div>
 
                 {form.coverUrl && (

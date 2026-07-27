@@ -11,6 +11,8 @@ import ManageBooks from './pages/ManageBooks';
 import AdminLogin from './pages/AdminLogin';
 import Profile from './pages/Profile';
 import AdminSettings from './pages/AdminSettings';
+import AdminOrders from './pages/AdminOrders';
+import AdminUsers from './pages/AdminUsers';
 import Shop from './pages/Shop';
 import './App.css';
 
@@ -74,6 +76,8 @@ function AppContent() {
               <Route path="/manage" element={<AdminRoute element={<ManageBooks />} />} />
               <Route path="/add-book" element={<AdminRoute element={<AddBook />} />} />
               <Route path="/settings" element={<AdminRoute element={<AdminSettings />} />} />
+              <Route path="/admin/orders" element={<AdminRoute element={<AdminOrders />} />} />
+              <Route path="/admin/users" element={<AdminRoute element={<AdminUsers />} />} />
             </Routes>
           </main>
           <Footer />

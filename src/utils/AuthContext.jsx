@@ -23,20 +23,26 @@ export const AuthProvider = ({ children }) => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
-        setIsAdmin(currentUser.email === 'admin@bookshibooks.com');
 
         const userRef = doc(db, 'users', currentUser.uid);
         const docSnap = await getDoc(userRef);
+
         if (!docSnap.exists()) {
+          // New user — create doc with role: 'user'
           await setDoc(userRef, {
             email: currentUser.email,
             displayName: currentUser.displayName || 'User',
             createdAt: Date.now(),
-            wishlist: []
+            wishlist: [],
+            role: 'user'
           });
+          setIsAdmin(false);
           setWishlistIds([]);
         } else {
-          setWishlistIds(docSnap.data().wishlist || []);
+          const data = docSnap.data();
+          // Read role from Firestore — 'admin' = true, anything else = false
+          setIsAdmin(data.role === 'admin');
+          setWishlistIds(data.wishlist || []);
         }
       } else {
         setUser(null);

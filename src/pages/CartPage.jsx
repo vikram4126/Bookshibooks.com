@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../App';
 import { useAuth } from '../utils/AuthContext';
 import { db } from '../utils/firebase';
-import { collection, addDoc, getDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, getDoc, doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { ShoppingCart, Tag } from 'lucide-react';
 import './CartPage.css';
 
@@ -13,10 +13,26 @@ const CartPage = () => {
   const navigate = useNavigate();
 
   const [shipping, setShipping] = useState({ name: '', phone: '', address: '', pincode: '' });
+  const [usedCoupons, setUsedCoupons] = useState([]);
   const [loading, setLoading] = useState(false);
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [couponError, setCouponError] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('cod');
+  const [txnId, setTxnId] = useState('');
+
+  // Fetch saved shipping address and used coupons on load
+  useEffect(() => {
+    if (user) {
+      getDoc(doc(db, 'users', user.uid)).then(docSnap => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (data.shipping) setShipping(data.shipping);
+          if (data.usedCoupons) setUsedCoupons(data.usedCoupons);
+        }
+      });
+    }
+  }, [user]);
 
   const totalAmount = cartItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
   
@@ -36,6 +52,11 @@ const CartPage = () => {
   const deliveryCharge = isFreeDelivery ? 0 : 50;
   const finalAmount = subtotalAfterDiscount + deliveryCharge;
 
+  // Generate UPI payment URL
+  // pa = VPA address (UPI ID), pn = Payee Name, am = Amount, cu = Currency, tn = Transaction Note
+  const upiUrl = `upi://pay?pa=8750777784@okbizaxis&pn=Anmol%20Tradings&am=${finalAmount}&cu=INR&tn=BookshiBooks%20Order`;
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(upiUrl)}`;
+
   const handleApplyCoupon = async (e) => {
     e.preventDefault();
     if (!couponCode) return;
@@ -46,8 +67,10 @@ const CartPage = () => {
       
       if (docSnap.exists()) {
         const data = docSnap.data();
-        if (data.active) {
-          setAppliedCoupon(data);
+        if (usedCoupons.includes(docSnap.id)) {
+          setCouponError("You have already used this coupon.");
+        } else if (data.active) {
+          setAppliedCoupon({ id: docSnap.id, ...data });
           setCouponCode('');
         } else {
           setCouponError("This coupon is no longer active.");
@@ -71,8 +94,31 @@ const CartPage = () => {
       alert("Please login first to place an order.");
       return;
     }
+    if (paymentMethod === 'qr' && !txnId) {
+      alert("Please enter the Transaction ID / Ref No. after making the payment.");
+      return;
+    }
     setLoading(true);
     try {
+      // Save address to user's profile and mark coupon as used
+      const userRef = doc(db, 'users', user.uid);
+      const updates = { shipping };
+      if (appliedCoupon && appliedCoupon.id) {
+        updates.usedCoupons = arrayUnion(appliedCoupon.id);
+      }
+      await updateDoc(userRef, updates);
+
+      // Update stock for each book in the cart
+      for (const item of cartItems) {
+        const bookRef = doc(db, 'books', item.id);
+        const bookSnap = await getDoc(bookRef);
+        if (bookSnap.exists()) {
+          const currentQty = Number(bookSnap.data().quantity || 0);
+          const newQty = Math.max(0, currentQty - item.qty);
+          await updateDoc(bookRef, { quantity: newQty });
+        }
+      }
+
       const order = {
         userId: user.uid,
         userEmail: user.email,
@@ -82,6 +128,9 @@ const CartPage = () => {
         discount: discountAmount,
         couponUsed: appliedCoupon ? appliedCoupon.code : null,
         shipping,
+        paymentMethod: paymentMethod === 'cod' ? 'Cash on Delivery' : 'UPI QR Code',
+        paymentStatus: paymentMethod === 'cod' ? 'Pending COD' : 'Pending Verification',
+        transactionId: paymentMethod === 'qr' ? txnId : null,
         status: 'Processing',
         createdAt: Date.now()
       };
@@ -180,8 +229,57 @@ const CartPage = () => {
             <input type="tel" placeholder="Phone Number" required value={shipping.phone} onChange={e => setShipping({...shipping, phone: e.target.value})} />
             <textarea placeholder="Full Delivery Address" required rows={3} value={shipping.address} onChange={e => setShipping({...shipping, address: e.target.value})} />
             <input type="text" placeholder="Pincode" required value={shipping.pincode} onChange={e => setShipping({...shipping, pincode: e.target.value})} />
+            
+            <h3 style={{ marginTop: '24px', marginBottom: '12px' }}>Payment Method</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.95rem' }}>
+                <input 
+                  type="radio" 
+                  name="paymentMethod" 
+                  value="cod" 
+                  checked={paymentMethod === 'cod'} 
+                  onChange={() => setPaymentMethod('cod')} 
+                />
+                <span>Cash on Delivery (COD)</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.95rem' }}>
+                <input 
+                  type="radio" 
+                  name="paymentMethod" 
+                  value="qr" 
+                  checked={paymentMethod === 'qr'} 
+                  onChange={() => setPaymentMethod('qr')} 
+                />
+                <span>Scan & Pay (UPI QR Code)</span>
+              </label>
+            </div>
+
+            {paymentMethod === 'qr' && (
+              <div className="qr-payment-box" style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px dashed var(--border)', textAlign: 'center', marginBottom: '20px' }}>
+                <h4 style={{ marginBottom: '12px', fontSize: '0.95rem' }}>Scan with GPay, PhonePe, Paytm, etc.</h4>
+                <div style={{ background: 'white', display: 'inline-block', padding: '10px', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+                  <img src={qrCodeUrl} alt="UPI QR Code" style={{ display: 'block', maxWidth: '100%', height: 'auto' }} />
+                </div>
+                <div style={{ marginTop: '12px', fontSize: '0.88rem', color: 'var(--text-2)' }}>
+                  <p>Payee: <strong>Anmol Tradings</strong></p>
+                  <p>Amount: <strong>₹{finalAmount}</strong></p>
+                </div>
+                <div style={{ marginTop: '16px', textAlign: 'left' }}>
+                  <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '6px', fontWeight: '600' }}>Transaction ID / Ref No. *</label>
+                  <input 
+                    type="text" 
+                    placeholder="Enter UPI Ref No. (12 digits)" 
+                    value={txnId} 
+                    onChange={(e) => setTxnId(e.target.value)} 
+                    required={paymentMethod === 'qr'}
+                    style={{ width: '100%', padding: '8px', border: '1px solid var(--border)', borderRadius: '4px' }}
+                  />
+                </div>
+              </div>
+            )}
+
             <button type="submit" className="btn btn-primary checkout-btn" disabled={loading || !user}>
-              {loading ? 'Processing...' : 'Place Order (Cash on Delivery)'}
+              {loading ? 'Processing...' : paymentMethod === 'cod' ? 'Place Order (Cash on Delivery)' : 'I Have Paid - Place Order'}
             </button>
           </form>
         </div>
