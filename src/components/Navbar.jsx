@@ -119,22 +119,21 @@ const Navbar = () => {
       {/* Category bar */}
       <div className="cat-bar">
         <div className="container cat-bar-inner">
-          {categories.map(c => (
+          <Link
+            to="/shop"
+            className={`cat-bar-link ${location.pathname === '/shop' && !searchParams.get('category') ? 'active' : ''}`}
+          >
+            <BookType size={16} style={{marginRight: '6px'}} /> All Books
+          </Link>
+          {categories.filter(c => c.value !== 'All').map(c => (
             <Link
               key={c.value}
-              to={`/?cat=${c.value}`}
-              className={`cat-bar-link ${
-                activeCat === c.value ||
-                (c.value === 'All' && !activeCat && location.pathname === '/')
-                  ? 'active' : ''
-              }`}
+              to={`/shop?category=${c.value}`}
+              className={`cat-bar-link ${searchParams.get('category') === c.value ? 'active' : ''}`}
             >
-              {c.value === 'All' && <BookType size={16} style={{marginRight: '6px'}} />}
               {c.label}
             </Link>
           ))}
-          <Link to="/?cat=Sale" className={`cat-bar-link sale-link ${activeCat === 'Sale' ? 'active' : ''}`}>Sale</Link>
-          <Link to="/?cat=Kids" className={`cat-bar-link kids-link ${activeCat === 'Kids' ? 'active' : ''}`}>Kids</Link>
         </div>
       </div>
     </header>

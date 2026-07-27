@@ -11,6 +11,7 @@ import ManageBooks from './pages/ManageBooks';
 import AdminLogin from './pages/AdminLogin';
 import Profile from './pages/Profile';
 import AdminSettings from './pages/AdminSettings';
+import Shop from './pages/Shop';
 import './App.css';
 
 export const CartContext = createContext(null);
@@ -61,6 +62,7 @@ function AppContent() {
             <Routes>
               {/* User Routes */}
               <Route path="/" element={<Home />} />
+              <Route path="/shop" element={<Shop />} />
               <Route path="/book/:id" element={<BookDetail />} />
               <Route path="/cart" element={<CartPage />} />
               <Route path="/profile" element={<Profile />} />
