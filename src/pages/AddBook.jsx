@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { addBook } from '../utils/storage';
 import { db } from '../utils/firebase';
 import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { compressAndUploadImage } from '../utils/imageUpload';
+import { Html5Qrcode } from 'html5-qrcode';
 import { UploadCloud } from 'lucide-react';
 import './AddBook.css';
 
@@ -23,6 +24,21 @@ const AddBook = () => {
   const [isRapidMode, setIsRapidMode] = useState(false);
   const [successScans, setSuccessScans] = useState([]);
   const [failedScans, setFailedScans] = useState([]);
+
+  // Camera Scanner States
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [cameraError, setCameraError] = useState('');
+  const scannerRef = useRef(null);
+
+  // Cleanup scanner on unmount
+  useEffect(() => {
+    return () => {
+      if (scannerRef.current) {
+        scannerRef.current.stop().catch(() => {});
+        scannerRef.current = null;
+      }
+    };
+  }, []);
 
   const playSound = (type) => {
     try {
@@ -190,6 +206,46 @@ const AddBook = () => {
     }
   };
 
+  const startCamera = async () => {
+    setCameraError('');
+    setIsCameraOpen(true);
+    // wait for DOM to render the div
+    setTimeout(async () => {
+      try {
+        const html5QrCode = new Html5Qrcode('qr-reader');
+        scannerRef.current = html5QrCode;
+        await html5QrCode.start(
+          { facingMode: 'environment' }, // back camera
+          { fps: 10, qrbox: { width: 250, height: 150 } },
+          async (decodedText) => {
+            // Got barcode — stop camera first, then process
+            await html5QrCode.stop();
+            scannerRef.current = null;
+            setIsCameraOpen(false);
+            setIsbn(decodedText);
+            // Auto-trigger fetch with scanned ISBN
+            setTimeout(() => {
+              document.getElementById('rapid-scan-trigger')?.click();
+            }, 200);
+          },
+          () => {} // ignore decode errors
+        );
+      } catch (err) {
+        console.error('Camera error', err);
+        setCameraError('Camera access denied or not available. Please allow camera permission in your browser settings.');
+        setIsCameraOpen(false);
+      }
+    }, 300);
+  };
+
+  const stopCamera = async () => {
+    if (scannerRef.current) {
+      try { await scannerRef.current.stop(); } catch(e) {}
+      scannerRef.current = null;
+    }
+    setIsCameraOpen(false);
+  };
+
   const handleSubmit = async e => {
     e.preventDefault();
     await addBook({ ...form, isbn });
@@ -226,21 +282,46 @@ const AddBook = () => {
 
           {isRapidMode ? (
             <div className="rapid-mode-container" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div className="isbn-input-group" style={{ display: 'flex', gap: '10px' }}>
+              {/* Camera viewfinder */}
+              {isCameraOpen && (
+                <div style={{ position: 'relative', background: '#000', borderRadius: '12px', overflow: 'hidden' }}>
+                  <div id="qr-reader" style={{ width: '100%' }} />
+                  <button
+                    type="button"
+                    onClick={stopCamera}
+                    style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', borderRadius: '50%', width: '36px', height: '36px', fontSize: '18px', cursor: 'pointer' }}
+                  >✕</button>
+                  <div style={{ position: 'absolute', bottom: '12px', left: 0, right: 0, textAlign: 'center', color: '#fff', fontSize: '0.85rem', background: 'rgba(0,0,0,0.4)', padding: '6px' }}>
+                    📸 Point camera at the barcode on the back of the book
+                  </div>
+                </div>
+              )}
+              {cameraError && <p style={{ color: '#dc2626', fontSize: '0.85rem', background: '#fef2f2', padding: '10px', borderRadius: '8px' }}>⚠️ {cameraError}</p>}
+
+              <div className="isbn-input-group" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                 <input 
                   type="text" 
-                  placeholder="Scan ISBN barcode here..." 
+                  placeholder="Scan barcode or type ISBN here..." 
                   value={isbn} 
                   onChange={e => setIsbn(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  style={{ flex: 1, padding: '16px', fontSize: '1.2rem', border: '2px solid #4f46e5', borderRadius: '8px', outline: 'none' }}
-                  autoFocus
+                  style={{ flex: 1, minWidth: '150px', padding: '16px', fontSize: '1.1rem', border: '2px solid #4f46e5', borderRadius: '8px', outline: 'none' }}
+                  autoFocus={!isCameraOpen}
                 />
-                <button type="button" onClick={handleFetchIsbn} disabled={loading} className="btn btn-navy" style={{ padding: '0 30px', fontSize: '1.1rem' }}>
-                  {loading ? '...' : 'Scan'}
+                {/* Hidden trigger button used by camera scanner */}
+                <button id="rapid-scan-trigger" type="button" onClick={handleFetchIsbn} style={{ display: 'none' }} />
+                <button
+                  type="button"
+                  onClick={isCameraOpen ? stopCamera : startCamera}
+                  style={{ padding: '0 20px', fontSize: '1rem', background: isCameraOpen ? '#dc2626' : '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                >
+                  {isCameraOpen ? '📷 Stop Camera' : '📷 Camera'}
+                </button>
+                <button type="button" onClick={handleFetchIsbn} disabled={loading} className="btn btn-navy" style={{ padding: '0 24px', fontSize: '1rem' }}>
+                  {loading ? '...' : '✓ Add'}
                 </button>
               </div>
-              <p style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: '0.9rem' }}>Books are automatically added with 50% discount on ₹299 MRP.</p>
+              <p style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: '0.85rem', margin: 0 }}>Books are automatically saved with 50% discount on ₹299 MRP.</p>
               
               <div style={{ display: 'flex', gap: '20px' }}>
                 <div style={{ flex: 1, border: '1px solid #e2e8f0', borderRadius: '8px', padding: '16px', background: '#f8fafc', maxHeight: '300px', overflowY: 'auto' }}>
