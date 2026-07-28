@@ -118,7 +118,7 @@ const Home = () => {
 
       {/* ── Dynamic Promo BANNERS ── */}
       {promos.length > 0 && (
-        <div className="container dual-banner-wrap" style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fit, minmax(${promos.length > 2 ? '250px' : '300px'}, 1fr))`, gap: '20px' }}>
+        <div className="container dual-banner-wrap">
           {promos.map((promo, idx) => (
             <Link key={idx} to={promo.link || '/shop'} className="dual-banner-link">
               <img src={promo.image} alt={`Promo ${idx+1}`} className="dual-banner-img" />

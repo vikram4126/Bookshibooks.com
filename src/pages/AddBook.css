@@ -33,4 +33,8 @@
 
 @media (max-width: 800px) {
   .addbook-container { grid-template-columns: 1fr; }
+  .addbook-form-card { padding: 20px; }
+  .form-row-2 { grid-template-columns: 1fr; }
+  .isbn-input-group { flex-wrap: wrap; }
+  .isbn-input-group button { width: 100%; }
 }

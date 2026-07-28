@@ -152,4 +152,9 @@
   .cart-summary {
     position: static;
   }
+  .cart-title { font-size: 1.4rem; margin-bottom: 20px; }
+  .cart-item { gap: 12px; padding: 12px; }
+  .cart-item-img { width: 70px; height: 95px; }
+  .cart-item-title { font-size: 0.95rem; }
+  .cart-page { padding: 20px 14px 60px; }
 }

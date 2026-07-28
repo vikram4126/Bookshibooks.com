@@ -27,3 +27,10 @@
 .bcard-price { font-size: 1.1rem; font-weight: 800; color: var(--text-1); }
 .bcard-mrp { font-size: 0.8rem; color: var(--text-3); text-decoration: line-through; }
 .bcard-discount-text { font-size: 0.75rem; font-weight: 700; color: var(--green); }
+
+@media (max-width: 600px) {
+  .bcard-title { font-size: 0.82rem; }
+  .bcard-price { font-size: 0.95rem; }
+  .bcard-body { padding: 8px; }
+  .bcard-discount, .bcard-badge { font-size: 0.65rem; padding: 3px 6px; }
+}
