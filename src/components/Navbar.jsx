@@ -4,7 +4,7 @@ import { useCart } from '../App';
 import { useAuth } from '../utils/AuthContext';
 import { 
   Search, Settings, PlusCircle, User, ShoppingCart, 
-  BookOpen, LogIn, Key, BookType, ShoppingBag
+  BookOpen, LogIn, LogOut, Key, BookType, ShoppingBag
 } from 'lucide-react';
 import './Navbar.css';
 
@@ -117,10 +117,16 @@ const Navbar = () => {
             )}
 
             {user ? (
-              <Link to="/profile" className="nav-action-link">
-                <span className="nav-action-icon"><User size={20} /></span>
-                <span>Profile</span>
-              </Link>
+              <>
+                <Link to="/profile" className="nav-action-link">
+                  <span className="nav-action-icon"><User size={20} /></span>
+                  <span>Profile</span>
+                </Link>
+                <button className="nav-action-link" onClick={handleLogout}>
+                  <span className="nav-action-icon"><LogOut size={20} /></span>
+                  <span>Logout</span>
+                </button>
+              </>
             ) : (
               <button className="nav-action-link btn-login" onClick={loginWithGoogle}>
                 <span className="nav-action-icon"><LogIn size={20} /></span>

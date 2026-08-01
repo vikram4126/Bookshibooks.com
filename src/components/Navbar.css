@@ -83,10 +83,10 @@
   .logo-name { font-size: 1.1rem; }
   .nav-action-link span:last-child { display: none; }
   .nav-cart-btn span:last-child { display: none; }
-  .nav-search { display: none; } /* hide search bar — use shop page filter instead */
   .announce-links { display: none; } /* too cramped on mobile */
-  .main-nav-inner { gap: 8px; }
-  .nav-right { gap: 4px; }
+  .main-nav-inner { flex-wrap: wrap; gap: 8px; }
+  .nav-search { display: flex; flex: 1 1 100%; order: 3; max-width: 100%; margin-top: 4px; }
+  .nav-right { order: 2; margin-left: auto; gap: 4px; }
   .nav-action-link, .nav-cart-btn { padding: 6px 8px; }
 }
 
