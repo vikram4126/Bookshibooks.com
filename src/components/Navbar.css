@@ -81,7 +81,7 @@
   .site-logo { flex: 0 0 auto; }
   .site-logo .logo-sub { display: none; }
   .logo-name { font-size: 1.1rem; }
-  .nav-action-link span:last-child { display: none; }
+  .nav-action-link:not(.btn-login) span:last-child { display: none; }
   .nav-cart-btn span:last-child { display: none; }
   .announce-links { display: none; } /* too cramped on mobile */
   .main-nav-inner { flex-wrap: wrap; gap: 8px; }
