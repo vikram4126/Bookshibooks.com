@@ -52,10 +52,10 @@ const CartPage = () => {
   const deliveryCharge = isFreeDelivery ? 0 : 50;
   const finalAmount = subtotalAfterDiscount + deliveryCharge;
 
-  // Generate UPI payment URL
-  // pa = VPA address (UPI ID), pn = Payee Name, am = Amount, cu = Currency, tn = Transaction Note
-  const upiUrl = `upi://pay?pa=8750777784@okbizaxis&pn=Anmol%20Tradings&am=${finalAmount}&cu=INR&tn=BookshiBooks%20Order`;
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(upiUrl)}`;
+  // Generate UPI payment link (Google Pay / PhonePe format)
+  // Format: upi://pay?pa=UPI_ID&pn=PAYEE_NAME&am=AMOUNT&cu=CURRENCY&tn=NOTE
+  const upiUrl = `upi://pay?pa=rohitkumar3783000@okhdfcbank&pn=Anmol%20Tradings&am=${finalAmount}&cu=INR&tn=BookshiBooks%20Order`;
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiUrl)}`;
 
   const handleApplyCoupon = async (e) => {
     e.preventDefault();
