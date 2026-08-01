@@ -22,6 +22,8 @@ const AddBook = () => {
   
   // Rapid Scan Mode States
   const [isRapidMode, setIsRapidMode] = useState(false);
+  const [rapidCategory, setRapidCategory] = useState('Kids');
+  const [rapidMrp, setRapidMrp] = useState('299');
   const [successScans, setSuccessScans] = useState([]);
   const [failedScans, setFailedScans] = useState([]);
 
@@ -152,12 +154,12 @@ const AddBook = () => {
 
       if (bookData) {
         if (isRapidMode) {
-          const oldPrice = 299; // Default MRP
+          const oldPrice = Number(rapidMrp) || 299; // Default MRP
           const price = Math.floor(oldPrice * 0.5); // 50% discount
           const newBook = {
             title: bookData.title,
             author: bookData.author,
-            category: 'Kids',
+            category: rapidCategory,
             condition: 'Good',
             price,
             oldPrice,
@@ -321,7 +323,24 @@ const AddBook = () => {
                   {loading ? '...' : '✓ Add'}
                 </button>
               </div>
-              <p style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: '0.85rem', margin: 0 }}>Books are automatically saved with 50% discount on ₹299 MRP.</p>
+              <p style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: '0.85rem', margin: 0 }}>Books are automatically saved with 50% discount on ₹{rapidMrp} MRP in '{rapidCategory}' category.</p>
+
+              <div style={{ display: 'flex', gap: '10px', background: '#fff', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '4px' }}>Category for Scanned Books</label>
+                  <select value={rapidCategory} onChange={e => setRapidCategory(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1' }}>
+                    <option value="Kids">Kids</option>
+                    <option value="Adults">Adults</option>
+                    <option value="Fiction">Fiction</option>
+                    <option value="Non-Fiction">Non-Fiction</option>
+                    <option value="Textbook">Textbook</option>
+                  </select>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '4px' }}>Base MRP (50% applied on this)</label>
+                  <input type="number" value={rapidMrp} onChange={e => setRapidMrp(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+                </div>
+              </div>
               
               <div style={{ display: 'flex', gap: '20px' }}>
                 <div style={{ flex: 1, border: '1px solid #e2e8f0', borderRadius: '8px', padding: '16px', background: '#f8fafc', maxHeight: '300px', overflowY: 'auto' }}>
