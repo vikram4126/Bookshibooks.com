@@ -130,13 +130,24 @@ const AddBook = () => {
       const googleData = await googleRes.json();
 
       if (googleData.items && googleData.items.length > 0) {
-        const vInfo = googleData.items[0].volumeInfo;
+        const item = googleData.items[0];
+        const vInfo = item.volumeInfo;
+        const saleInfo = item.saleInfo;
         cover = vInfo.imageLinks?.thumbnail || '';
         if (cover && cover.startsWith('http:')) cover = cover.replace('http:', 'https:');
+        
+        let fetchedMrp = null;
+        if (saleInfo?.listPrice?.amount) {
+           fetchedMrp = saleInfo.listPrice.amount;
+        } else if (saleInfo?.retailPrice?.amount) {
+           fetchedMrp = saleInfo.retailPrice.amount;
+        }
+
         bookData = {
           title: vInfo.title,
           author: vInfo.authors ? vInfo.authors.join(', ') : 'Unknown Author',
-          coverUrl: cover
+          coverUrl: cover,
+          fetchedMrp: fetchedMrp
         };
       } else {
         // Step 2: Open Library Fallback
@@ -154,7 +165,7 @@ const AddBook = () => {
 
       if (bookData) {
         if (isRapidMode) {
-          const oldPrice = Number(rapidMrp) || 299; // Default MRP
+          const oldPrice = bookData.fetchedMrp ? Math.round(bookData.fetchedMrp) : (Number(rapidMrp) || 299);
           const price = Math.floor(oldPrice * 0.5); // 50% discount
           const newBook = {
             title: bookData.title,
@@ -178,6 +189,8 @@ const AddBook = () => {
             title: bookData.title || prev.title,
             author: bookData.author || prev.author,
             coverUrl: bookData.coverUrl || prev.coverUrl,
+            oldPrice: bookData.fetchedMrp ? Math.round(bookData.fetchedMrp) : prev.oldPrice,
+            price: bookData.fetchedMrp ? Math.floor(bookData.fetchedMrp * 0.5) : prev.price
           }));
         }
       } else {
@@ -323,7 +336,7 @@ const AddBook = () => {
                   {loading ? '...' : '✓ Add'}
                 </button>
               </div>
-              <p style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: '0.85rem', margin: 0 }}>Books are automatically saved with 50% discount on ₹{rapidMrp} MRP in '{rapidCategory}' category.</p>
+              <p style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: '0.85rem', margin: 0 }}>Books are automatically saved with 50% discount on their <strong>actual MRP</strong> (if found), otherwise on <strong>₹{rapidMrp}</strong> in '{rapidCategory}' category.</p>
 
               <div style={{ display: 'flex', gap: '10px', background: '#fff', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                 <div style={{ flex: 1 }}>
