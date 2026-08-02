@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { db } from '../utils/firebase';
 import { collection, getDocs, doc, updateDoc, query, orderBy } from 'firebase/firestore';
 import { useAuth } from '../utils/AuthContext';
-import { Check, TrendingUp, ShoppingBag, AlertCircle, Printer } from 'lucide-react';
+import { Check, TrendingUp, ShoppingBag, AlertCircle, Printer, Truck } from 'lucide-react';
+import { sendShippedEmail, sendDeliveredEmail } from '../utils/emailNotifications';
 import './AdminOrders.css';
 
 const AdminOrders = () => {
@@ -12,6 +13,7 @@ const AdminOrders = () => {
   const [stats, setStats] = useState({ totalSales: 0, totalOrders: 0, pendingVerification: 0 });
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [trackingInputs, setTrackingInputs] = useState({}); // { orderId: { number, courier } }
 
   useEffect(() => {
     if (isAdmin) {
@@ -126,10 +128,39 @@ const AdminOrders = () => {
 
   const handleUpdateStatus = async (orderId, newStatus) => {
     try {
-      await updateDoc(doc(db, 'orders', orderId), { status: newStatus });
-      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
-      // Recalculate stats in case status affects total sales sum
-      calculateStats(orders.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+      const order = orders.find(o => o.id === orderId);
+      const updates = { status: newStatus };
+
+      // If shipping, save tracking info too
+      const tracking = trackingInputs[orderId];
+      if (newStatus === 'Shipped' && tracking?.number) {
+        updates.trackingNumber = tracking.number;
+        updates.courierName = tracking.courier || 'Shiprocket';
+      }
+
+      await updateDoc(doc(db, 'orders', orderId), updates);
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updates } : o));
+      calculateStats(orders.map(o => o.id === orderId ? { ...o, ...updates } : o));
+
+      // Send email notification
+      if (order) {
+        const customerName = order.shipping?.name || 'Customer';
+        const customerEmail = order.userEmail;
+        const displayOrderId = order.orderId || `#${order.id.slice(-6).toUpperCase()}`;
+
+        if (newStatus === 'Shipped') {
+          sendShippedEmail({
+            orderId: displayOrderId,
+            customerName,
+            customerEmail,
+            trackingNumber: tracking?.number || '',
+            courierName: tracking?.courier || 'Shiprocket'
+          }).catch(e => console.warn('Email failed:', e));
+        } else if (newStatus === 'Delivered') {
+          sendDeliveredEmail({ orderId: displayOrderId, customerName, customerEmail })
+            .catch(e => console.warn('Email failed:', e));
+        }
+      }
     } catch (err) {
       console.error(err);
       alert("Failed to update status");
@@ -301,6 +332,30 @@ const AdminOrders = () => {
                     </div>
                   </td>
                   <td>
+                    {/* Tracking input — shown only when status is Processing/Shipped */}
+                    {(order.status === 'Processing' || order.status === 'Shipped') && (
+                      <div style={{ marginBottom: '6px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <input
+                          type="text"
+                          placeholder="Tracking No."
+                          value={trackingInputs[order.id]?.number ?? (order.trackingNumber || '')}
+                          onChange={e => setTrackingInputs(prev => ({ ...prev, [order.id]: { ...prev[order.id], number: e.target.value } }))}
+                          style={{ width: '100%', padding: '4px 8px', fontSize: '0.78rem', border: '1px solid #cbd5e1', borderRadius: '4px' }}
+                        />
+                        <input
+                          type="text"
+                          placeholder="Courier (e.g. Shiprocket)"
+                          value={trackingInputs[order.id]?.courier ?? (order.courierName || '')}
+                          onChange={e => setTrackingInputs(prev => ({ ...prev, [order.id]: { ...prev[order.id], courier: e.target.value } }))}
+                          style={{ width: '100%', padding: '4px 8px', fontSize: '0.78rem', border: '1px solid #cbd5e1', borderRadius: '4px' }}
+                        />
+                      </div>
+                    )}
+                    {order.trackingNumber && order.status === 'Delivered' && (
+                      <div style={{ fontSize: '0.78rem', color: '#16a34a', background: '#f0fdf4', padding: '4px 8px', borderRadius: '4px' }}>
+                        <Truck size={12} style={{ marginRight: 4 }} />{order.courierName}: {order.trackingNumber}
+                      </div>
+                    )}
                     <select
                       className="status-select"
                       value={order.status || 'Processing'}
@@ -313,6 +368,25 @@ const AdminOrders = () => {
                     </select>
                   </td>
                   <td>
+                    {/* Return Request Badge */}
+                    {order.returnStatus && (
+                      <div style={{ marginBottom: '6px', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '6px', padding: '6px 8px', fontSize: '0.78rem' }}>
+                        <div style={{ fontWeight: '700', color: '#c2410c' }}>↩️ Return Requested</div>
+                        <div style={{ color: '#78716c', marginTop: '2px' }}>{order.returnReason}</div>
+                        {order.returnStatus === 'Pending' && (
+                          <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
+                            <button
+                              onClick={async () => { await updateDoc(doc(db, 'orders', order.id), { returnStatus: 'Approved' }); setOrders(prev => prev.map(o => o.id === order.id ? { ...o, returnStatus: 'Approved' } : o)); }}
+                              style={{ padding: '2px 8px', background: '#16a34a', color: 'white', border: 'none', borderRadius: '4px', fontSize: '0.72rem', cursor: 'pointer' }}
+                            >Approve</button>
+                            <button
+                              onClick={async () => { await updateDoc(doc(db, 'orders', order.id), { returnStatus: 'Rejected' }); setOrders(prev => prev.map(o => o.id === order.id ? { ...o, returnStatus: 'Rejected' } : o)); }}
+                              style={{ padding: '2px 8px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '4px', fontSize: '0.72rem', cursor: 'pointer' }}
+                            >Reject</button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <button
                       onClick={() => printShippingLabels([order])}
                       title="Print Shipping Label"

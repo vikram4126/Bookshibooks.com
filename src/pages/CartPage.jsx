@@ -4,12 +4,20 @@ import { useCart } from '../App';
 import { useAuth } from '../utils/AuthContext';
 import { db } from '../utils/firebase';
 import { collection, addDoc, getDoc, doc, updateDoc, arrayUnion } from 'firebase/firestore';
-import { ShoppingCart, Tag } from 'lucide-react';
+import { ShoppingCart, Tag, Smartphone } from 'lucide-react';
+import { sendOrderConfirmationEmail } from '../utils/emailNotifications';
 import './CartPage.css';
+
+const generateOrderId = () => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let id = 'ORD-BK-';
+  for (let i = 0; i < 6; i++) id += chars[Math.floor(Math.random() * chars.length)];
+  return id;
+};
 
 const CartPage = () => {
   const { cartItems, updateQty, removeFromCart, totalCount, clearCart } = useCart();
-  const { user } = useAuth();
+  const { user, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
 
   const [shipping, setShipping] = useState({ name: '', phone: '', address: '', pincode: '' });
@@ -19,7 +27,11 @@ const CartPage = () => {
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [couponError, setCouponError] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cod');
-  const [txnId, setTxnId] = useState('');
+
+  // Payment verification modal states
+  const [showVerifyModal, setShowVerifyModal] = useState(false);
+  const [verifyStep, setVerifyStep] = useState('confirming'); // 'confirming' | 'verifying' | 'success'
+  const [generatedOrderId, setGeneratedOrderId] = useState('');
 
   // Fetch saved shipping address and used coupons on load
   useEffect(() => {
@@ -43,7 +55,6 @@ const CartPage = () => {
     } else {
       discountAmount = appliedCoupon.discountValue;
     }
-    // ensure discount doesn't exceed total
     if (discountAmount > totalAmount) discountAmount = totalAmount;
   }
 
@@ -52,8 +63,6 @@ const CartPage = () => {
   const deliveryCharge = isFreeDelivery ? 0 : 50;
   const finalAmount = subtotalAfterDiscount + deliveryCharge;
 
-  // Generate UPI payment link (Google Pay / PhonePe format)
-  // Format: upi://pay?pa=UPI_ID&pn=PAYEE_NAME&am=AMOUNT&cu=CURRENCY&tn=NOTE
   const upiUrl = `upi://pay?pa=rohitkumar3783000@okhdfcbank&pn=Anmol%20Tradings&am=${finalAmount}&cu=INR&tn=BookshiBooks%20Order`;
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiUrl)}`;
 
@@ -64,7 +73,6 @@ const CartPage = () => {
     try {
       const code = couponCode.toUpperCase().trim();
       const docSnap = await getDoc(doc(db, 'coupons', code));
-      
       if (docSnap.exists()) {
         const data = docSnap.data();
         if (usedCoupons.includes(docSnap.id)) {
@@ -84,23 +92,14 @@ const CartPage = () => {
     }
   };
 
-  const removeCoupon = () => {
-    setAppliedCoupon(null);
-  };
+  const removeCoupon = () => setAppliedCoupon(null);
 
-  const handleCheckout = async (e) => {
-    e.preventDefault();
-    if (!user) {
-      alert("Please login first to place an order.");
-      return;
-    }
-    if (paymentMethod === 'qr' && !txnId) {
-      alert("Please enter the Transaction ID / Ref No. after making the payment.");
-      return;
-    }
-    setLoading(true);
+  // Final save order to Firebase
+  const saveOrderToDb = async () => {
+    const orderId = generateOrderId();
+    setGeneratedOrderId(orderId);
+
     try {
-      // Save address to user's profile and mark coupon as used
       const userRef = doc(db, 'users', user.uid);
       const updates = { shipping };
       if (appliedCoupon && appliedCoupon.id) {
@@ -108,18 +107,17 @@ const CartPage = () => {
       }
       await updateDoc(userRef, updates);
 
-      // Update stock for each book in the cart
       for (const item of cartItems) {
         const bookRef = doc(db, 'books', item.id);
         const bookSnap = await getDoc(bookRef);
         if (bookSnap.exists()) {
           const currentQty = Number(bookSnap.data().quantity || 0);
-          const newQty = Math.max(0, currentQty - item.qty);
-          await updateDoc(bookRef, { quantity: newQty });
+          await updateDoc(bookRef, { quantity: Math.max(0, currentQty - item.qty) });
         }
       }
 
-      const order = {
+      await addDoc(collection(db, 'orders'), {
+        orderId,
         userId: user.uid,
         userEmail: user.email,
         items: cartItems.map(item => ({ id: item.id, title: item.title, price: item.price, qty: item.qty })),
@@ -130,19 +128,61 @@ const CartPage = () => {
         shipping,
         paymentMethod: paymentMethod === 'cod' ? 'Cash on Delivery' : 'UPI QR Code',
         paymentStatus: paymentMethod === 'cod' ? 'Pending COD' : 'Pending Verification',
-        transactionId: paymentMethod === 'qr' ? txnId : null,
         status: 'Processing',
         createdAt: Date.now()
-      };
-      await addDoc(collection(db, 'orders'), order);
+      });
+
+      // Send confirmation email to customer
+      sendOrderConfirmationEmail({
+        orderId,
+        customerName: shipping.name || user.displayName || 'Customer',
+        customerEmail: user.email,
+        items: cartItems,
+        total: finalAmount,
+        paymentMethod: paymentMethod === 'cod' ? 'Cash on Delivery' : 'UPI QR Code'
+      }).catch(err => console.warn('Email failed:', err)); // non-blocking
+
       clearCart();
-      alert("Order placed successfully!");
-      navigate('/profile');
     } catch (err) {
       console.error(err);
-      alert("Failed to place order.");
+      throw err;
+    }
+  };
+
+  const handleCheckout = async (e) => {
+    e.preventDefault();
+    if (!user) { loginWithGoogle(); return; }
+
+    if (paymentMethod === 'qr') {
+      // Show the payment confirmation modal
+      setShowVerifyModal(true);
+      setVerifyStep('confirming');
+      return;
+    }
+
+    // COD: direct order
+    setLoading(true);
+    try {
+      await saveOrderToDb();
+      navigate('/profile');
+    } catch {
+      alert("Failed to place order. Please try again.");
     }
     setLoading(false);
+  };
+
+  // Called when user clicks "I Have Paid" in the modal
+  const handleConfirmPayment = async () => {
+    setVerifyStep('verifying');
+    // Simulate verification delay (1.5s)
+    await new Promise(r => setTimeout(r, 1500));
+    try {
+      await saveOrderToDb();
+      setVerifyStep('success');
+    } catch {
+      setShowVerifyModal(false);
+      alert("Failed to place order. Please try again.");
+    }
   };
 
   if (cartItems.length === 0) {
@@ -159,132 +199,191 @@ const CartPage = () => {
   }
 
   return (
-    <main className="cart-page container fade-up">
-      <h1 className="cart-title">Your Cart ({totalCount} items)</h1>
-      <div className="cart-layout">
-        <div className="cart-items">
-          {cartItems.map(item => (
-            <div key={item.id} className="cart-item">
-              <img src={item.image || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?q=80&w=200&auto=format&fit=crop'} alt={item.title} className="cart-item-img" />
-              <div className="cart-item-details">
-                <Link to={`/book/${item.id}`} className="cart-item-title">{item.title}</Link>
-                <div className="cart-item-price">₹{item.price}</div>
-                <div className="cart-item-actions">
-                  <div className="qty-control">
-                    <button onClick={() => updateQty(item.id, item.qty - 1)}>−</button>
-                    <span>{item.qty}</span>
-                    <button onClick={() => updateQty(item.id, item.qty + 1)}>+</button>
-                  </div>
-                  <button className="remove-btn" onClick={() => removeFromCart(item.id)}>Remove</button>
+    <>
+      {/* ── Payment Verification Modal ── */}
+      {showVerifyModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+        }}>
+          <div style={{
+            background: 'white', borderRadius: '16px', padding: '32px',
+            maxWidth: '420px', width: '100%', textAlign: 'center',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+          }}>
+            {verifyStep === 'confirming' && (
+              <>
+                <div style={{ fontSize: '3rem', marginBottom: '12px' }}>📲</div>
+                <h3 style={{ marginBottom: '8px', fontSize: '1.2rem' }}>Complete Your Payment</h3>
+                <p style={{ color: 'var(--text-3)', fontSize: '0.9rem', marginBottom: '20px' }}>
+                  Scan the QR or open your UPI app and pay <strong>₹{finalAmount}</strong> to <strong>Anmol Tradings</strong>.
+                </p>
+                <div style={{ background: 'white', display: 'inline-block', padding: '10px', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', marginBottom: '20px' }}>
+                  <img src={qrCodeUrl} alt="UPI QR Code" style={{ display: 'block', width: '180px', height: '180px' }} />
                 </div>
-              </div>
-            </div>
-          ))}
+                <div style={{ marginBottom: '8px' }}>
+                  <a
+                    href={upiUrl}
+                    className="btn btn-navy"
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', marginBottom: '12px', textDecoration: 'none' }}
+                  >
+                    <Smartphone size={18} /> Open UPI App (GPay / PhonePe)
+                  </a>
+                </div>
+                <button
+                  onClick={handleConfirmPayment}
+                  className="btn btn-primary checkout-btn"
+                  style={{ width: '100%', marginBottom: '10px' }}
+                >
+                  ✅ I Have Paid — Confirm Order
+                </button>
+                <button
+                  onClick={() => setShowVerifyModal(false)}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: '0.85rem', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+              </>
+            )}
+
+            {verifyStep === 'verifying' && (
+              <>
+                <div style={{ fontSize: '2.5rem', marginBottom: '16px', animation: 'spin 1s linear infinite', display: 'inline-block' }}>⏳</div>
+                <h3 style={{ marginBottom: '8px', color: 'var(--primary)' }}>Verifying Payment...</h3>
+                <p style={{ color: 'var(--text-3)', fontSize: '0.9rem' }}>Please wait while we confirm your payment securely.</p>
+              </>
+            )}
+
+            {verifyStep === 'success' && (
+              <>
+                <div style={{ fontSize: '3.5rem', marginBottom: '16px' }}>🎉</div>
+                <h3 style={{ color: '#16a34a', marginBottom: '8px', fontSize: '1.3rem' }}>Order Placed!</h3>
+                <p style={{ color: 'var(--text-2)', fontSize: '0.95rem', marginBottom: '8px' }}>
+                  Your Order ID is:
+                </p>
+                <div style={{ background: '#f0fdf4', border: '2px solid #16a34a', borderRadius: '10px', padding: '12px 20px', fontWeight: '800', fontSize: '1.2rem', color: '#15803d', letterSpacing: '2px', marginBottom: '16px' }}>
+                  {generatedOrderId}
+                </div>
+                <p style={{ color: 'var(--text-3)', fontSize: '0.85rem', marginBottom: '20px' }}>
+                  Screenshot this for your records. We will verify your UPI payment and ship the books within 24 hours.
+                </p>
+                <button
+                  onClick={() => navigate('/profile')}
+                  className="btn btn-navy"
+                  style={{ width: '100%' }}
+                >
+                  View My Orders
+                </button>
+              </>
+            )}
+          </div>
         </div>
+      )}
 
-        <div className="cart-summary">
-          <h2>Order Summary</h2>
-          <div className="summary-row">
-            <span>Subtotal</span>
-            <span>₹{totalAmount}</span>
-          </div>
-          
-          {appliedCoupon && (
-            <div className="summary-row" style={{ color: 'var(--success)' }}>
-              <span>Discount ({appliedCoupon.code}) <button onClick={removeCoupon} style={{background: 'none', border: 'none', color: '#e53935', cursor: 'pointer', fontSize: '0.8rem', marginLeft: '8px'}}>[Remove]</button></span>
-              <span>-₹{discountAmount}</span>
-            </div>
-          )}
-
-          <div className="summary-row">
-            <span>Delivery</span>
-            <span>{isFreeDelivery ? <span style={{color: 'var(--success)'}}>Free</span> : `₹${deliveryCharge}`}</span>
-          </div>
-          <div className="summary-row summary-total">
-            <span>Total</span>
-            <span>₹{finalAmount}</span>
-          </div>
-
-          {!appliedCoupon && (
-            <div className="coupon-section" style={{marginTop: '20px', padding: '16px', background: '#f8fafc', borderRadius: '8px'}}>
-              <h4 style={{marginBottom: '10px', fontSize: '0.95rem', display: 'flex', alignItems: 'center'}}><Tag size={16} style={{marginRight: '6px'}}/> Have a coupon?</h4>
-              <div style={{display: 'flex', gap: '8px'}}>
-                <input 
-                  type="text" 
-                  placeholder="Enter code" 
-                  value={couponCode} 
-                  onChange={(e) => setCouponCode(e.target.value)}
-                  style={{flex: 1, padding: '8px', border: '1px solid var(--border)', borderRadius: '4px'}}
-                />
-                <button className="btn btn-outline" onClick={handleApplyCoupon} style={{padding: '8px 12px'}}>Apply</button>
+      <main className="cart-page container fade-up">
+        <h1 className="cart-title">Your Cart ({totalCount} items)</h1>
+        <div className="cart-layout">
+          <div className="cart-items">
+            {cartItems.map(item => (
+              <div key={item.id} className="cart-item">
+                <img src={item.image || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?q=80&w=200&auto=format&fit=crop'} alt={item.title} className="cart-item-img" />
+                <div className="cart-item-details">
+                  <Link to={`/book/${item.id}`} className="cart-item-title">{item.title}</Link>
+                  <div className="cart-item-price">₹{item.price}</div>
+                  <div className="cart-item-actions">
+                    <div className="qty-control">
+                      <button onClick={() => updateQty(item.id, item.qty - 1)}>−</button>
+                      <span>{item.qty}</span>
+                      <button onClick={() => updateQty(item.id, item.qty + 1)}>+</button>
+                    </div>
+                    <button className="remove-btn" onClick={() => removeFromCart(item.id)}>Remove</button>
+                  </div>
+                </div>
               </div>
-              {couponError && <p style={{color: '#e53935', fontSize: '0.85rem', marginTop: '8px'}}>{couponError}</p>}
-            </div>
-          )}
+            ))}
+          </div>
 
-          <form className="checkout-form" onSubmit={handleCheckout} style={{marginTop: '24px'}}>
-            <h3>Shipping Details</h3>
-            {!user && <p style={{color: '#ef4444', fontSize: '0.9rem', marginBottom: '12px'}}>You must be logged in to checkout.</p>}
-            <input type="text" placeholder="Full Name" required value={shipping.name} onChange={e => setShipping({...shipping, name: e.target.value})} />
-            <input type="tel" placeholder="Phone Number" required value={shipping.phone} onChange={e => setShipping({...shipping, phone: e.target.value})} />
-            <textarea placeholder="Full Delivery Address" required rows={3} value={shipping.address} onChange={e => setShipping({...shipping, address: e.target.value})} />
-            <input type="text" placeholder="Pincode" required value={shipping.pincode} onChange={e => setShipping({...shipping, pincode: e.target.value})} />
+          <div className="cart-summary">
+            <h2>Order Summary</h2>
+            <div className="summary-row">
+              <span>Subtotal</span>
+              <span>₹{totalAmount}</span>
+            </div>
             
-            <h3 style={{ marginTop: '24px', marginBottom: '12px' }}>Payment Method</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.95rem' }}>
-                <input 
-                  type="radio" 
-                  name="paymentMethod" 
-                  value="cod" 
-                  checked={paymentMethod === 'cod'} 
-                  onChange={() => setPaymentMethod('cod')} 
-                />
-                <span>Cash on Delivery (COD)</span>
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.95rem' }}>
-                <input 
-                  type="radio" 
-                  name="paymentMethod" 
-                  value="qr" 
-                  checked={paymentMethod === 'qr'} 
-                  onChange={() => setPaymentMethod('qr')} 
-                />
-                <span>Scan & Pay (UPI QR Code)</span>
-              </label>
-            </div>
-
-            {paymentMethod === 'qr' && (
-              <div className="qr-payment-box" style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px dashed var(--border)', textAlign: 'center', marginBottom: '20px' }}>
-                <h4 style={{ marginBottom: '12px', fontSize: '0.95rem' }}>Scan with GPay, PhonePe, Paytm, etc.</h4>
-                <div style={{ background: 'white', display: 'inline-block', padding: '10px', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-                  <img src={qrCodeUrl} alt="UPI QR Code" style={{ display: 'block', maxWidth: '100%', height: 'auto' }} />
-                </div>
-                <div style={{ marginTop: '12px', fontSize: '0.88rem', color: 'var(--text-2)' }}>
-                  <p>Payee: <strong>Anmol Tradings</strong></p>
-                  <p>Amount: <strong>₹{finalAmount}</strong></p>
-                </div>
-                <div style={{ marginTop: '16px', textAlign: 'left' }}>
-                  <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '6px', fontWeight: '600' }}>Transaction ID / Ref No. *</label>
-                  <input 
-                    type="text" 
-                    placeholder="Enter UPI Ref No. (12 digits)" 
-                    value={txnId} 
-                    onChange={(e) => setTxnId(e.target.value)} 
-                    required={paymentMethod === 'qr'}
-                    style={{ width: '100%', padding: '8px', border: '1px solid var(--border)', borderRadius: '4px' }}
-                  />
-                </div>
+            {appliedCoupon && (
+              <div className="summary-row" style={{ color: 'var(--success)' }}>
+                <span>Discount ({appliedCoupon.code}) <button onClick={removeCoupon} style={{background: 'none', border: 'none', color: '#e53935', cursor: 'pointer', fontSize: '0.8rem', marginLeft: '8px'}}>[Remove]</button></span>
+                <span>-₹{discountAmount}</span>
               </div>
             )}
 
-            <button type="submit" className="btn btn-primary checkout-btn" disabled={loading || !user}>
-              {loading ? 'Processing...' : paymentMethod === 'cod' ? 'Place Order (Cash on Delivery)' : 'I Have Paid - Place Order'}
-            </button>
-          </form>
+            <div className="summary-row">
+              <span>Delivery</span>
+              <span>{isFreeDelivery ? <span style={{color: 'var(--success)'}}>Free</span> : `₹${deliveryCharge}`}</span>
+            </div>
+            <div className="summary-row summary-total">
+              <span>Total</span>
+              <span>₹{finalAmount}</span>
+            </div>
+
+            {!appliedCoupon && (
+              <div className="coupon-section" style={{marginTop: '20px', padding: '16px', background: '#f8fafc', borderRadius: '8px'}}>
+                <h4 style={{marginBottom: '10px', fontSize: '0.95rem', display: 'flex', alignItems: 'center'}}><Tag size={16} style={{marginRight: '6px'}}/> Have a coupon?</h4>
+                <div style={{display: 'flex', gap: '8px'}}>
+                  <input 
+                    type="text" 
+                    placeholder="Enter code" 
+                    value={couponCode} 
+                    onChange={(e) => setCouponCode(e.target.value)}
+                    style={{flex: 1, padding: '8px', border: '1px solid var(--border)', borderRadius: '4px'}}
+                  />
+                  <button className="btn btn-outline" onClick={handleApplyCoupon} style={{padding: '8px 12px'}}>Apply</button>
+                </div>
+                {couponError && <p style={{color: '#e53935', fontSize: '0.85rem', marginTop: '8px'}}>{couponError}</p>}
+              </div>
+            )}
+
+            <form className="checkout-form" onSubmit={handleCheckout} style={{marginTop: '24px'}}>
+              <h3>Shipping Details</h3>
+              {!user && <p style={{color: '#ef4444', fontSize: '0.9rem', marginBottom: '12px'}}>You must be logged in to checkout.</p>}
+              <input type="text" placeholder="Full Name" required value={shipping.name} onChange={e => setShipping({...shipping, name: e.target.value})} />
+              <input type="tel" placeholder="Phone Number" required value={shipping.phone} onChange={e => setShipping({...shipping, phone: e.target.value})} />
+              <textarea placeholder="Full Delivery Address" required rows={3} value={shipping.address} onChange={e => setShipping({...shipping, address: e.target.value})} />
+              <input type="text" placeholder="Pincode" required value={shipping.pincode} onChange={e => setShipping({...shipping, pincode: e.target.value})} />
+              
+              <h3 style={{ marginTop: '24px', marginBottom: '12px' }}>Payment Method</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.95rem' }}>
+                  <input type="radio" name="paymentMethod" value="cod" checked={paymentMethod === 'cod'} onChange={() => setPaymentMethod('cod')} />
+                  <span>🚚 Cash on Delivery (COD)</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.95rem' }}>
+                  <input type="radio" name="paymentMethod" value="qr" checked={paymentMethod === 'qr'} onChange={() => setPaymentMethod('qr')} />
+                  <span>📱 Pay via UPI (GPay, PhonePe, Paytm)</span>
+                </label>
+              </div>
+
+              {paymentMethod === 'qr' && (
+                <div style={{ background: '#eef2ff', padding: '14px', borderRadius: '8px', fontSize: '0.88rem', color: '#4338ca', marginBottom: '16px', border: '1px solid #c7d2fe' }}>
+                  💡 After clicking "Proceed to Pay", a payment screen will open. Scan QR or tap "Open UPI App", complete the payment, and then click "I Have Paid".
+                </div>
+              )}
+
+              {!user ? (
+                <button type="button" className="btn btn-primary checkout-btn" onClick={loginWithGoogle}>
+                  Login to Place Order
+                </button>
+              ) : (
+                <button type="submit" className="btn btn-primary checkout-btn" disabled={loading}>
+                  {loading ? 'Processing...' : paymentMethod === 'cod' ? '🛒 Place Order (Cash on Delivery)' : '📱 Proceed to Pay ₹' + finalAmount}
+                </button>
+              )}
+            </form>
+          </div>
         </div>
-      </div>
-    </main>
+      </main>
+    </>
   );
 };
 
